@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Download } from "lucide-react";
+import type { UserProfile } from "../auth/permissions";
 import { emptyLeadFilters, filterLeads, type LeadFilters as LeadFilterValue } from "../data/selectors";
 import type { FollowUp, FollowUpInput } from "../domain/followUp";
 import type { Lead } from "../domain/lead";
@@ -12,6 +13,10 @@ interface LeadsPageProps {
   leads: Lead[];
   getFollowUps: (leadId: string) => FollowUp[];
   onSelect: (lead: Lead) => void;
+  currentUserId?: string;
+  onClaim?: (lead: Lead) => Promise<unknown>;
+  owners?: UserProfile[];
+  onAssign?: (leadId: string, ownerId: string | null) => Promise<void>;
   selectedLead?: Lead;
   onCloseDetail: () => void;
   onSubmitFollowUp: (input: FollowUpInput) => Promise<void>;
@@ -23,6 +28,10 @@ export function LeadsPage({
   leads,
   getFollowUps,
   onSelect,
+  currentUserId,
+  onClaim,
+  owners,
+  onAssign,
   selectedLead,
   onCloseDetail,
   onSubmitFollowUp,
@@ -32,8 +41,13 @@ export function LeadsPage({
   const [filters, setFilters] = useState<LeadFilterValue>(
     initialFilters ?? emptyLeadFilters,
   );
+  const [scope, setScope] = useState<"all" | "mine" | "unassigned">("all");
   const [exportFeedback, setExportFeedback] = useState("");
-  const filteredLeads = filterLeads(leads, filters);
+  const filteredLeads = filterLeads(leads, filters).filter((lead) => {
+    if (scope === "mine") return lead.ownerId === currentUserId;
+    if (scope === "unassigned") return !lead.ownerId;
+    return true;
+  });
   const cities = [...new Set(leads.map((lead) => lead.city))];
 
   const exportLeads = () => {
@@ -59,6 +73,32 @@ export function LeadsPage({
 
       <LeadFilters cities={cities} onChange={setFilters} value={filters} />
 
+      {currentUserId ? (
+        <div aria-label="线索归属范围" className="scope-bar" role="group">
+          <button
+            aria-pressed={scope === "all"}
+            onClick={() => setScope("all")}
+            type="button"
+          >
+            全部可视线索
+          </button>
+          <button
+            aria-pressed={scope === "mine"}
+            onClick={() => setScope("mine")}
+            type="button"
+          >
+            我的线索
+          </button>
+          <button
+            aria-pressed={scope === "unassigned"}
+            onClick={() => setScope("unassigned")}
+            type="button"
+          >
+            待认领
+          </button>
+        </div>
+      ) : null}
+
       <section className="panel list-panel" aria-labelledby="lead-list-title">
         <div className="panel-heading">
           <div>
@@ -73,6 +113,7 @@ export function LeadsPage({
         </div>
         <LeadList
           leads={filteredLeads}
+          onClaim={onClaim}
           onRevealPhone={onRevealPhone}
           onSelect={onSelect}
         />
@@ -81,10 +122,12 @@ export function LeadsPage({
       <LeadDetailDrawer
         history={selectedLead ? getFollowUps(selectedLead.id) : []}
         lead={selectedLead}
+        onAssign={onAssign}
         onClose={onCloseDetail}
         onRevealPhone={onRevealPhone}
         onSubmitFollowUp={onSubmitFollowUp}
         open={Boolean(selectedLead)}
+        owners={owners}
       />
     </div>
   );

@@ -1,5 +1,11 @@
 import { useState } from "react";
-import { ChevronRight, Copy, Eye, LoaderCircle } from "lucide-react";
+import {
+  ChevronRight,
+  Copy,
+  Eye,
+  LoaderCircle,
+  UserRoundPlus,
+} from "lucide-react";
 import type { Lead } from "../domain/lead";
 import { copyText } from "../utils/clipboard";
 import {
@@ -14,18 +20,21 @@ interface LeadListProps {
   leads: Lead[];
   onSelect: (lead: Lead) => void;
   onRevealPhone?: (lead: Lead) => Promise<string | undefined>;
+  onClaim?: (lead: Lead) => Promise<unknown>;
 }
 
 export function LeadList({
   leads,
   onSelect,
   onRevealPhone,
+  onClaim,
 }: LeadListProps) {
   const [revealedPhones, setRevealedPhones] = useState<Record<string, string>>(
     {},
   );
   const [phoneErrors, setPhoneErrors] = useState<Record<string, string>>({});
   const [busyPhoneIds, setBusyPhoneIds] = useState<Record<string, boolean>>({});
+  const [claimingIds, setClaimingIds] = useState<Record<string, boolean>>({});
   const [feedback, setFeedback] = useState("");
 
   const copyValue = async (value: string, successMessage: string) => {
@@ -63,6 +72,21 @@ export function LeadList({
       }));
     } finally {
       setBusyPhoneIds((current) => ({ ...current, [lead.id]: false }));
+    }
+  };
+
+  const claimLead = async (lead: Lead) => {
+    if (!onClaim || claimingIds[lead.id]) return;
+
+    setFeedback("");
+    setClaimingIds((current) => ({ ...current, [lead.id]: true }));
+    try {
+      await onClaim(lead);
+      setFeedback(`线索 ${lead.phoneMasked} 已认领。`);
+    } catch {
+      setFeedback("认领失败，可能已被其他同事认领。");
+    } finally {
+      setClaimingIds((current) => ({ ...current, [lead.id]: false }));
     }
   };
 
@@ -205,14 +229,36 @@ export function LeadList({
                     <StatusBadge state={lead.syncState} />
                   </td>
                   <td>
-                    <button
-                      aria-label={`查看 ${lead.phoneMasked} 的线索详情`}
-                      className="icon-button"
-                      onClick={() => onSelect(lead)}
-                      type="button"
-                    >
-                      <ChevronRight aria-hidden="true" size={18} />
-                    </button>
+                    <div className="lead-actions">
+                      {onClaim && !lead.ownerId ? (
+                        <button
+                          aria-label={`认领线索 ${lead.phoneMasked}`}
+                          className="compact-action"
+                          disabled={Boolean(claimingIds[lead.id])}
+                          onClick={() => claimLead(lead)}
+                          type="button"
+                        >
+                          {claimingIds[lead.id] ? (
+                            <LoaderCircle
+                              aria-hidden="true"
+                              className="is-spinning"
+                              size={14}
+                            />
+                          ) : (
+                            <UserRoundPlus aria-hidden="true" size={14} />
+                          )}
+                          认领
+                        </button>
+                      ) : null}
+                      <button
+                        aria-label={`查看 ${lead.phoneMasked} 的线索详情`}
+                        className="icon-button"
+                        onClick={() => onSelect(lead)}
+                        type="button"
+                      >
+                        <ChevronRight aria-hidden="true" size={18} />
+                      </button>
+                    </div>
                   </td>
                 </tr>
               );
@@ -306,6 +352,26 @@ export function LeadList({
                       {revealingPhone ? "获取中" : "获取手机号"}
                     </button>
                   )
+                ) : null}
+                {onClaim && !lead.ownerId ? (
+                  <button
+                    aria-label={`认领线索 ${lead.phoneMasked}`}
+                    className="compact-action"
+                    disabled={Boolean(claimingIds[lead.id])}
+                    onClick={() => claimLead(lead)}
+                    type="button"
+                  >
+                    {claimingIds[lead.id] ? (
+                      <LoaderCircle
+                        aria-hidden="true"
+                        className="is-spinning"
+                        size={14}
+                      />
+                    ) : (
+                      <UserRoundPlus aria-hidden="true" size={14} />
+                    )}
+                    {claimingIds[lead.id] ? "认领中" : "认领线索"}
+                  </button>
                 ) : null}
               </div>
               {phoneError ? (

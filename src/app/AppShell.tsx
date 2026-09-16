@@ -1,18 +1,26 @@
+import { LogOut } from "lucide-react";
 import type { ReactNode } from "react";
+import type { UserProfile } from "../auth/permissions";
 import type { PageId } from "../domain/navigation";
-import { navigationItems } from "./navigation";
+import { getNavigationItems } from "./navigation";
 
 interface AppShellProps {
   currentPage: PageId;
   onNavigate: (page: PageId) => void;
+  profile?: UserProfile;
+  onSignOut?: () => Promise<void>;
   children: ReactNode;
 }
 
 export function AppShell({
   currentPage,
   onNavigate,
+  profile,
+  onSignOut,
   children,
 }: AppShellProps) {
+  const visibleNavigation = getNavigationItems(profile?.role ?? "admin");
+
   return (
     <div className="app-shell">
       <a className="skip-link" href="#main-content">
@@ -29,7 +37,7 @@ export function AppShell({
         </div>
 
         <nav className="side-nav" aria-label="主导航">
-          {navigationItems.map((item) => {
+          {visibleNavigation.map((item) => {
             const Icon = item.icon;
             return (
               <button
@@ -46,12 +54,23 @@ export function AppShell({
           })}
         </nav>
 
-        <div className="sidebar-status">
+        <div className="sidebar-account">
           <span className="status-dot status-dot--success" />
-          <span>
-            <strong>连接器在线</strong>
-            <small>2 分钟前完成同步</small>
+          <span className="sidebar-account__identity">
+            <strong>{profile?.displayName || "开发管理员"}</strong>
+            <small>{profile?.role === "sales" ? "业务员" : "管理员"}</small>
           </span>
+          {onSignOut ? (
+            <button
+              aria-label="退出登录"
+              className="inline-icon-button"
+              onClick={onSignOut}
+              title="退出登录"
+              type="button"
+            >
+              <LogOut aria-hidden="true" size={15} />
+            </button>
+          ) : null}
         </div>
       </aside>
 
@@ -60,7 +79,7 @@ export function AppShell({
       </main>
 
       <nav className="bottom-nav" aria-label="移动端主导航">
-        {navigationItems.map((item) => {
+        {visibleNavigation.map((item) => {
           const Icon = item.icon;
           return (
             <button

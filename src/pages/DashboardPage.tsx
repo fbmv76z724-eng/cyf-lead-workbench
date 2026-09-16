@@ -25,6 +25,7 @@ interface DashboardPageProps {
   onNavigate: (page: PageId) => void;
   syncing?: boolean;
   onSync: () => void;
+  showAdminTools?: boolean;
 }
 
 export function DashboardPage({
@@ -34,6 +35,7 @@ export function DashboardPage({
   onNavigate,
   syncing = false,
   onSync,
+  showAdminTools = true,
 }: DashboardPageProps) {
   const metrics = getDashboardMetrics(leads);
   const periods = getPeriodComparisonMetrics(leads, onboardingRecords);
@@ -69,7 +71,10 @@ export function DashboardPage({
         </div>
       </header>
 
-      <section aria-label="今日关键指标" className="kpi-grid">
+      <section
+        aria-label="今日关键指标"
+        className={`kpi-grid${showAdminTools ? "" : " kpi-grid--five"}`}
+      >
         <KpiCard
           context="今日流入司服"
           icon={Waves}
@@ -109,14 +114,16 @@ export function DashboardPage({
           tone="blue"
           value={metrics.offlineWaiting}
         />
-        <KpiCard
-          context="冲突或写回失败"
-          icon={AlertTriangle}
-          label="同步异常"
-          onClick={() => onNavigate("sync")}
-          tone="red"
-          value={metrics.syncIssues}
-        />
+        {showAdminTools ? (
+          <KpiCard
+            context="冲突或写回失败"
+            icon={AlertTriangle}
+            label="同步异常"
+            onClick={() => onNavigate("sync")}
+            tone="red"
+            value={metrics.syncIssues}
+          />
+        ) : null}
       </section>
 
       <section className="panel period-panel" aria-labelledby="period-title">
@@ -278,12 +285,14 @@ export function DashboardPage({
           </details>
         </section>
 
-        <SyncHealthPanel
-          issueCount={metrics.syncIssues}
-          lastSyncLabel={lastSyncLabel}
-          onSync={onSync}
-          syncing={syncing}
-        />
+        {showAdminTools ? (
+          <SyncHealthPanel
+            issueCount={metrics.syncIssues}
+            lastSyncLabel={lastSyncLabel}
+            onSync={onSync}
+            syncing={syncing}
+          />
+        ) : null}
 
         <section className="panel queue-panel" aria-labelledby="queue-title">
           <div className="panel-heading">

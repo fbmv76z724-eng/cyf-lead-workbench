@@ -1,1 +1,7 @@
-export type PageId = "dashboard" | "leads" | "offline" | "reports" | "sync";
+export type PageId =
+  | "dashboard"
+  | "leads"
+  | "offline"
+  | "reports"
+  | "sync"
+  | "accounts";

@@ -342,6 +342,10 @@ main {
   grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
+.kpi-grid--five {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
 .kpi-card {
   display: flex;
   min-height: 112px;
@@ -952,6 +956,32 @@ main {
   margin-bottom: 14px;
 }
 
+.scope-bar {
+  display: inline-flex;
+  gap: 3px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  padding: 3px;
+  margin-bottom: 14px;
+}
+
+.scope-bar button {
+  min-height: 34px;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  padding: 0 12px;
+  color: var(--color-muted-foreground);
+  font-size: 0.8rem;
+  font-weight: 650;
+}
+
+.scope-bar button[aria-pressed="true"] {
+  background: var(--color-primary-soft);
+  color: var(--color-primary-strong);
+}
+
 .search-field {
   display: flex;
   grid-column: span 2;
@@ -1149,6 +1179,12 @@ main {
 .icon-button:hover {
   border-color: var(--color-border);
   background: var(--color-muted);
+}
+
+.lead-actions {
+  display: flex;
+  align-items: center;
+  gap: 5px;
 }
 
 .status-badge {
@@ -1392,6 +1428,23 @@ main {
   margin-top: 22px;
 }
 
+.assignment-bar {
+  display: grid;
+  grid-template-columns: minmax(180px, 260px) minmax(0, 1fr);
+  align-items: end;
+  gap: 10px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-muted);
+  padding: 11px;
+  margin-top: 14px;
+}
+
+.assignment-bar small {
+  padding-bottom: 9px;
+  color: var(--color-muted-foreground);
+}
+
 .section-heading {
   display: flex;
   align-items: baseline;
@@ -1481,6 +1534,67 @@ main {
 
 .offline-list {
   display: grid;
+}
+
+.sidebar-account {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  margin-top: auto;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: 11px;
+  background: #fbfdff;
+}
+
+.sidebar-account__identity {
+  display: grid;
+  min-width: 0;
+  flex: 1;
+  gap: 2px;
+}
+
+.sidebar-account__identity strong {
+  overflow: hidden;
+  font-size: 0.84rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sidebar-account__identity small {
+  color: var(--color-muted-foreground);
+  font-size: 0.72rem;
+}
+
+.account-table {
+  min-width: 760px;
+}
+
+.account-table select {
+  min-height: 36px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-md);
+  background: #fff;
+  padding: 6px 9px;
+}
+
+.account-identity {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.toggle-field {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  white-space: nowrap;
+}
+
+.toggle-field input {
+  width: 17px;
+  height: 17px;
+  accent-color: var(--color-accent);
 }
 
 .offline-item {

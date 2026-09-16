@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import type { UserProfile } from "../auth/permissions";
 import type { FollowUp, FollowUpInput } from "../domain/followUp";
 import type {
   Lead,
@@ -73,6 +74,15 @@ function mapFollowUpRow(row: Row): FollowUp {
     operatorName: String(row.operator_name ?? ""),
     syncState: String(row.sync_state ?? "pending") as SyncState,
     origin: row.origin === "cyf" ? "cyf" : "local",
+  };
+}
+
+function mapProfileRow(row: Row): UserProfile {
+  return {
+    id: String(row.id),
+    displayName: String(row.display_name ?? ""),
+    role: row.role === "admin" ? "admin" : "sales",
+    active: row.active !== false,
   };
 }
 
@@ -253,6 +263,28 @@ export function createSupabaseRepository(
       upsertLead(lead);
       emit();
       return lead;
+    },
+    async listProfiles() {
+      const result = await client
+        .from("profiles")
+        .select("id, display_name, role, active")
+        .order("display_name");
+      if (result.error) throw new Error(result.error.message);
+      return (result.data ?? []).map((row) => mapProfileRow(row as Row));
+    },
+    async updateProfile(id, changes) {
+      const result = await client
+        .from("profiles")
+        .update({
+          role: changes.role,
+          active: changes.active,
+        })
+        .eq("id", id)
+        .select("id, display_name, role, active")
+        .single();
+      return mapProfileRow(
+        assertResult(result.data as Row | null, result.error),
+      );
     },
     async sync() {
       await load();

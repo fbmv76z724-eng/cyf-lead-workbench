@@ -1,3 +1,4 @@
+import type { UserProfile } from "../auth/permissions";
 import type { FollowUp, FollowUpInput } from "../domain/followUp";
 import type { Lead, LocalFollowStatus } from "../domain/lead";
 import type { LeadFilters } from "./selectors";
@@ -28,6 +29,11 @@ export interface LeadRepository {
   addOfflineLead(input: CreateOfflineLeadInput): Promise<Lead>;
   claimLead(id: string): Promise<Lead>;
   assignLead(id: string, ownerId: string | null): Promise<Lead>;
+  listProfiles(): Promise<UserProfile[]>;
+  updateProfile(
+    id: string,
+    changes: Pick<UserProfile, "role" | "active">,
+  ): Promise<UserProfile>;
   sync(): Promise<SyncResult>;
   subscribe(listener: () => void): () => void;
   getSnapshot(): Lead[];
@@ -43,6 +49,7 @@ export function createMockRepository(
 ): LeadRepository {
   let leads = initialLeads;
   let followUps = initialFollowUps;
+  let profiles: UserProfile[] = [];
   const listeners = new Set<() => void>();
 
   const emit = () => {
@@ -144,6 +151,16 @@ export function createMockRepository(
       leads = leads.map((item) => (item.id === id ? assignedLead : item));
       emit();
       return assignedLead;
+    },
+    async listProfiles() {
+      return profiles;
+    },
+    async updateProfile(id, changes) {
+      const current = profiles.find((profile) => profile.id === id);
+      if (!current) throw new Error("PROFILE_NOT_FOUND");
+      const profile = { ...current, ...changes };
+      profiles = profiles.map((item) => (item.id === id ? profile : item));
+      return profile;
     },
     async sync() {
       await new Promise((resolve) => window.setTimeout(resolve, 600));

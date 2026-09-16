@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Eye, Phone, X } from "lucide-react";
+import type { UserProfile } from "../auth/permissions";
 import type { FollowUp, FollowUpInput } from "../domain/followUp";
 import {
   LINK_STATUS_LABELS,
@@ -19,6 +20,8 @@ interface LeadDetailDrawerProps {
   onClose: () => void;
   onSubmitFollowUp: (input: FollowUpInput) => Promise<void>;
   onRevealPhone: (lead: Lead) => Promise<string | undefined>;
+  owners?: UserProfile[];
+  onAssign?: (leadId: string, ownerId: string | null) => Promise<void>;
 }
 
 interface FormState {
@@ -44,6 +47,8 @@ export function LeadDetailDrawer({
   onClose,
   onSubmitFollowUp,
   onRevealPhone,
+  owners = [],
+  onAssign,
 }: LeadDetailDrawerProps) {
   const headingRef = useRef<HTMLHeadingElement>(null);
   const [form, setForm] = useState<FormState>(initialForm);
@@ -53,6 +58,8 @@ export function LeadDetailDrawer({
   const [revealedPhone, setRevealedPhone] = useState("");
   const [phoneError, setPhoneError] = useState("");
   const [revealingPhone, setRevealingPhone] = useState(false);
+  const [assigning, setAssigning] = useState(false);
+  const [assignmentFeedback, setAssignmentFeedback] = useState("");
 
   useEffect(() => {
     if (!open) return;
@@ -63,6 +70,8 @@ export function LeadDetailDrawer({
     setRevealedPhone("");
     setPhoneError("");
     setRevealingPhone(false);
+    setAssigning(false);
+    setAssignmentFeedback("");
   }, [open, lead?.id]);
 
   useEffect(() => {
@@ -123,6 +132,20 @@ export function LeadDetailDrawer({
       setPhoneError("获取手机号失败，请重试");
     } finally {
       setRevealingPhone(false);
+    }
+  };
+
+  const assignLead = async (ownerId: string) => {
+    if (!onAssign || assigning) return;
+    setAssignmentFeedback("");
+    setAssigning(true);
+    try {
+      await onAssign(lead.id, ownerId || null);
+      setAssignmentFeedback(ownerId ? "负责人已更新。" : "线索已释放到待认领池。");
+    } catch {
+      setAssignmentFeedback("负责人更新失败，请重试。");
+    } finally {
+      setAssigning(false);
     }
   };
 
@@ -200,6 +223,33 @@ export function LeadDetailDrawer({
               <StatusBadge state={lead.syncState} />
             </div>
           </div>
+
+          {onAssign ? (
+            <div className="assignment-bar">
+              <label className="field">
+                <span>负责人</span>
+                <select
+                  aria-label="负责人"
+                  disabled={assigning}
+                  onChange={(event) => void assignLead(event.target.value)}
+                  value={lead.ownerId ?? ""}
+                >
+                  <option value="">待认领</option>
+                  {owners
+                    .filter((owner) => owner.active)
+                    .map((owner) => (
+                      <option key={owner.id} value={owner.id}>
+                        {owner.displayName} ·{" "}
+                        {owner.role === "admin" ? "管理员" : "业务员"}
+                      </option>
+                    ))}
+                </select>
+              </label>
+              {assignmentFeedback ? (
+                <small role="status">{assignmentFeedback}</small>
+              ) : null}
+            </div>
+          ) : null}
 
           {lead.syncState === "conflict" ? (
             <div className="inline-notice inline-notice--warning" role="status">

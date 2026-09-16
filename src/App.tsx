@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { AppShell } from "./app/AppShell";
 import { useAuth } from "./auth/AuthProvider";
+import type { UserProfile } from "./auth/permissions";
 import {
   createMockRepository,
   type CreateOfflineLeadInput,
@@ -18,8 +19,24 @@ import { OfflineLeadsPage } from "./pages/OfflineLeadsPage";
 import { ReportsPage } from "./pages/ReportsPage";
 import { SyncPage } from "./pages/SyncPage";
 import { LoginPage } from "./pages/LoginPage";
+import { AccountsPage } from "./pages/AccountsPage";
 
-export function WorkbenchApp() {
+interface WorkbenchAppProps {
+  profile?: UserProfile;
+  onSignOut?: () => Promise<void>;
+}
+
+const devAdminProfile: UserProfile = {
+  id: "dev-admin",
+  displayName: "开发管理员",
+  role: "admin",
+  active: true,
+};
+
+export function WorkbenchApp({
+  profile = devAdminProfile,
+  onSignOut,
+}: WorkbenchAppProps) {
   const client = getSupabaseClient();
   const repository = useMemo(
     () =>
@@ -38,10 +55,46 @@ export function WorkbenchApp() {
   const [syncing, setSyncing] = useState(false);
   const [lastSyncAt, setLastSyncAt] = useState("2026-09-16T10:18:00+08:00");
   const [lastSyncLabel, setLastSyncLabel] = useState("2 分钟前");
+  const [profiles, setProfiles] = useState<UserProfile[]>([]);
+  const [profilesLoading, setProfilesLoading] = useState(false);
+  const [profilesError, setProfilesError] = useState("");
+  const isAdmin = profile.role === "admin";
 
   useEffect(() => {
     void repository.load();
   }, [repository]);
+
+  useEffect(() => {
+    if (!isAdmin || !client) return;
+    let active = true;
+    setProfilesLoading(true);
+    setProfilesError("");
+    void repository
+      .listProfiles()
+      .then((nextProfiles) => {
+        if (active) setProfiles(nextProfiles);
+      })
+      .catch(() => {
+        if (active) setProfilesError("账号列表加载失败，请稍后重试。");
+      })
+      .finally(() => {
+        if (active) setProfilesLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [client, isAdmin, repository]);
+
+  useEffect(() => {
+    if (isAdmin) return;
+    if (
+      currentPage === "reports" ||
+      currentPage === "sync" ||
+      currentPage === "accounts"
+    ) {
+      setCurrentPage("dashboard");
+    }
+  }, [currentPage, isAdmin]);
 
   const selectedLead = selectedLeadId
     ? leads.find((lead) => lead.id === selectedLeadId)
@@ -69,8 +122,37 @@ export function WorkbenchApp() {
     await repository.addFollowUp(input);
   };
 
+  const handleClaim = async (lead: Lead) => {
+    await repository.claimLead(lead.id);
+    setSelectedLeadId(lead.id);
+  };
+
+  const handleAssign = async (leadId: string, ownerId: string | null) => {
+    await repository.assignLead(leadId, ownerId);
+  };
+
+  const handleUpdateProfile = async (
+    target: UserProfile,
+    changes: Pick<UserProfile, "role" | "active">,
+  ) => {
+    setProfilesError("");
+    try {
+      const updated = await repository.updateProfile(target.id, changes);
+      setProfiles((current) =>
+        current.map((item) => (item.id === updated.id ? updated : item)),
+      );
+    } catch {
+      setProfilesError("账号更新失败，请稍后重试。");
+    }
+  };
+
   return (
-    <AppShell currentPage={currentPage} onNavigate={setCurrentPage}>
+    <AppShell
+      currentPage={currentPage}
+      onNavigate={setCurrentPage}
+      onSignOut={onSignOut}
+      profile={profile}
+    >
       {currentPage === "dashboard" ? (
         <DashboardPage
           leads={leads}
@@ -78,19 +160,24 @@ export function WorkbenchApp() {
           onNavigate={setCurrentPage}
           onboardingRecords={mockOnboardingRecords}
           onSync={handleSync}
+          showAdminTools={isAdmin}
           syncing={syncing}
         />
       ) : null}
 
       {currentPage === "leads" ? (
         <LeadsPage
+          currentUserId={profile.id}
           getFollowUps={repository.getFollowUps}
           leads={leads}
+          onAssign={isAdmin ? handleAssign : undefined}
+          onClaim={isAdmin ? undefined : handleClaim}
           onCloseDetail={() => setSelectedLeadId(undefined)}
           onRevealPhone={async (lead) => lead.phoneFull}
           onSelect={openLead}
           onSubmitFollowUp={handleFollowUp}
           selectedLead={selectedLead}
+          owners={isAdmin ? profiles : undefined}
         />
       ) : null}
 
@@ -105,14 +192,25 @@ export function WorkbenchApp() {
         />
       ) : null}
 
-      {currentPage === "reports" ? <ReportsPage leads={leads} /> : null}
+      {isAdmin && currentPage === "reports" ? (
+        <ReportsPage leads={leads} />
+      ) : null}
 
-      {currentPage === "sync" ? (
+      {isAdmin && currentPage === "sync" ? (
         <SyncPage
           lastSyncAt={lastSyncAt}
           leads={leads}
           onSync={handleSync}
           syncing={syncing}
+        />
+      ) : null}
+
+      {isAdmin && currentPage === "accounts" ? (
+        <AccountsPage
+          error={profilesError}
+          loading={profilesLoading}
+          onUpdate={handleUpdateProfile}
+          profiles={profiles}
         />
       ) : null}
     </AppShell>
@@ -166,6 +264,7 @@ export default function App() {
     session,
     error,
     signIn,
+    signOut,
   } = useAuth();
 
   if (configurationMissing) {
@@ -174,5 +273,5 @@ export default function App() {
   if (loading) return <LoadingPage />;
   if (!session || !profile) return <LoginPage error={error} signIn={signIn} />;
 
-  return <WorkbenchApp />;
+  return <WorkbenchApp onSignOut={signOut} profile={profile} />;
 }
