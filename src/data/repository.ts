@@ -22,6 +22,15 @@ export interface CreateAccountInput {
   role: UserProfile["role"];
 }
 
+export interface UpdateAccountInput {
+  id: string;
+  email: string;
+  displayName: string;
+  password?: string;
+  role: UserProfile["role"];
+  active: boolean;
+}
+
 export interface SyncResult {
   processed: number;
   failed: number;
@@ -40,10 +49,7 @@ export interface LeadRepository {
   assignLead(id: string, ownerId: string | null): Promise<Lead>;
   listProfiles(): Promise<UserProfile[]>;
   createAccount(input: CreateAccountInput): Promise<UserProfile>;
-  updateProfile(
-    id: string,
-    changes: Pick<UserProfile, "role" | "active">,
-  ): Promise<UserProfile>;
+  updateAccount(input: UpdateAccountInput): Promise<UserProfile>;
   sync(): Promise<SyncResult>;
   subscribe(listener: () => void): () => void;
   getSnapshot(): Lead[];
@@ -174,17 +180,26 @@ export function createMockRepository(
       const profile: UserProfile = {
         id: createId("profile"),
         displayName: input.displayName,
+        email: input.email,
         role: input.role,
         active: true,
       };
       profiles = [profile, ...profiles];
       return profile;
     },
-    async updateProfile(id, changes) {
-      const current = profiles.find((profile) => profile.id === id);
+    async updateAccount(input) {
+      const current = profiles.find((profile) => profile.id === input.id);
       if (!current) throw new Error("PROFILE_NOT_FOUND");
-      const profile = { ...current, ...changes };
-      profiles = profiles.map((item) => (item.id === id ? profile : item));
+      const profile = {
+        ...current,
+        displayName: input.displayName,
+        email: input.email,
+        role: input.role,
+        active: input.active,
+      };
+      profiles = profiles.map((item) =>
+        item.id === input.id ? profile : item,
+      );
       return profile;
     },
     async sync() {

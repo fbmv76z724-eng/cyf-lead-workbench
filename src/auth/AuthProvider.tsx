@@ -26,6 +26,7 @@ function mapProfile(row: Record<string, unknown>): UserProfile {
   return {
     id: String(row.id),
     displayName: String(row.display_name || ""),
+    email: String(row.email || ""),
     role: row.role === "admin" ? "admin" : "sales",
     active: row.active !== false,
   };
@@ -59,7 +60,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setLoading(true);
       const { data, error: profileError } = await client
         .from("profiles")
-        .select("id, display_name, role, active")
+        .select("id, display_name, email, role, active")
         .eq("id", nextSession.user.id)
         .maybeSingle();
 

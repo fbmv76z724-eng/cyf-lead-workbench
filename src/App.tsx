@@ -6,6 +6,7 @@ import {
   type CreateAccountInput,
   createMockRepository,
   type CreateOfflineLeadInput,
+  type UpdateAccountInput,
 } from "./data/repository";
 import { createSupabaseRepository } from "./data/supabaseRepository";
 import { getSupabaseClient } from "./data/supabaseClient";
@@ -144,13 +145,10 @@ export function WorkbenchApp({
     await repository.assignLead(leadId, ownerId);
   };
 
-  const handleUpdateProfile = async (
-    target: UserProfile,
-    changes: Pick<UserProfile, "role" | "active">,
-  ) => {
+  const handleUpdateAccount = async (input: UpdateAccountInput) => {
     setProfilesError("");
     try {
-      const updated = await repository.updateProfile(target.id, changes);
+      const updated = await repository.updateAccount(input);
       setProfiles((current) =>
         current.map((item) => (item.id === updated.id ? updated : item)),
       );
@@ -228,7 +226,7 @@ export function WorkbenchApp({
           error={profilesError}
           loading={profilesLoading}
           onCreate={handleCreateAccount}
-          onUpdate={handleUpdateProfile}
+          onUpdate={handleUpdateAccount}
           profiles={profiles}
         />
       ) : null}

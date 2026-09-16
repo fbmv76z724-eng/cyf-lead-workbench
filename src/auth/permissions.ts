@@ -3,6 +3,7 @@ export type UserRole = "admin" | "sales";
 export interface UserProfile {
   id: string;
   displayName: string;
+  email?: string;
   role: UserRole;
   active: boolean;
 }

@@ -1,19 +1,35 @@
 import { useState, type FormEvent } from "react";
-import { Plus, ShieldCheck, UserRound, X } from "lucide-react";
+import { Pencil, Plus, ShieldCheck, UserRound, X } from "lucide-react";
 import type { UserProfile, UserRole } from "../auth/permissions";
-import type { CreateAccountInput } from "../data/repository";
+import type {
+  CreateAccountInput,
+  UpdateAccountInput,
+} from "../data/repository";
 import { Button } from "../components/Button";
 
 interface AccountsPageProps {
   profiles: UserProfile[];
   loading?: boolean;
   error?: string;
-  onUpdate: (
-    profile: UserProfile,
-    changes: Pick<UserProfile, "role" | "active">,
-  ) => Promise<void>;
+  onUpdate: (input: UpdateAccountInput) => Promise<void>;
   onCreate: (input: CreateAccountInput) => Promise<void>;
 }
+
+interface AccountFormState {
+  email: string;
+  displayName: string;
+  password: string;
+  role: UserRole;
+  active: boolean;
+}
+
+const emptyForm: AccountFormState = {
+  email: "",
+  displayName: "",
+  password: "",
+  role: "sales",
+  active: true,
+};
 
 export function AccountsPage({
   profiles,
@@ -22,39 +38,81 @@ export function AccountsPage({
   onUpdate,
   onCreate,
 }: AccountsPageProps) {
-  const [showForm, setShowForm] = useState(false);
-  const [form, setForm] = useState<CreateAccountInput>({
-    email: "",
-    displayName: "",
-    password: "",
-    role: "sales",
-  });
+  const [editingProfile, setEditingProfile] = useState<UserProfile>();
+  const [formOpen, setFormOpen] = useState(false);
+  const [form, setForm] = useState<AccountFormState>(emptyForm);
   const [formError, setFormError] = useState("");
   const [saving, setSaving] = useState(false);
+  const isEditing = Boolean(editingProfile);
+
+  const openCreate = () => {
+    setEditingProfile(undefined);
+    setForm(emptyForm);
+    setFormError("");
+    setFormOpen(true);
+  };
+
+  const openEdit = (profile: UserProfile) => {
+    setEditingProfile(profile);
+    setForm({
+      email: profile.email ?? "",
+      displayName: profile.displayName,
+      password: "",
+      role: profile.role,
+      active: profile.active,
+    });
+    setFormError("");
+    setFormOpen(true);
+  };
+
+  const closeForm = () => {
+    setFormOpen(false);
+    setEditingProfile(undefined);
+    setFormError("");
+  };
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
     setFormError("");
-    if (!form.displayName.trim() || !form.email.trim() || !form.password) {
-      setFormError("请填写姓名、邮箱和初始密码。");
+    if (!form.displayName.trim() || !form.email.trim()) {
+      setFormError("请填写姓名和邮箱。");
       return;
     }
-    if (form.password.length < 8) {
+    if (!isEditing && form.password.length < 8) {
       setFormError("初始密码至少需要 8 位。");
+      return;
+    }
+    if (isEditing && form.password && form.password.length < 8) {
+      setFormError("新密码至少需要 8 位，留空则不修改密码。");
       return;
     }
 
     setSaving(true);
     try {
-      await onCreate({
-        ...form,
-        displayName: form.displayName.trim(),
-        email: form.email.trim(),
-      });
-      setForm({ email: "", displayName: "", password: "", role: "sales" });
-      setShowForm(false);
+      if (editingProfile) {
+        await onUpdate({
+          id: editingProfile.id,
+          email: form.email.trim(),
+          displayName: form.displayName.trim(),
+          password: form.password || undefined,
+          role: form.role,
+          active: form.active,
+        });
+      } else {
+        await onCreate({
+          email: form.email.trim(),
+          displayName: form.displayName.trim(),
+          password: form.password,
+          role: form.role,
+        });
+      }
+      closeForm();
     } catch {
-      setFormError("账号创建失败，请检查邮箱是否已存在。");
+      setFormError(
+        isEditing
+          ? "账号更新失败，请检查邮箱是否已存在。"
+          : "账号创建失败，请检查邮箱是否已存在。",
+      );
     } finally {
       setSaving(false);
     }
@@ -66,11 +124,11 @@ export function AccountsPage({
         <div>
           <p className="eyebrow">权限与状态</p>
           <h1>账号管理</h1>
-          <p>管理员可调整账号角色和启用状态。</p>
+          <p>管理员可新增账号，并修改姓名、邮箱、角色、状态和登录密码。</p>
         </div>
         <Button
           icon={<Plus aria-hidden="true" size={17} />}
-          onClick={() => setShowForm(true)}
+          onClick={openCreate}
           variant="primary"
         >
           新增账号
@@ -97,9 +155,10 @@ export function AccountsPage({
               <thead>
                 <tr>
                   <th>姓名</th>
-                  <th>账号 ID</th>
+                  <th>登录邮箱</th>
                   <th>角色</th>
                   <th>状态</th>
+                  <th aria-label="操作" />
                 </tr>
               </thead>
               <tbody>
@@ -116,43 +175,19 @@ export function AccountsPage({
                       </span>
                     </td>
                     <td>
+                      <strong>{profile.email || "未设置邮箱"}</strong>
                       <code>{profile.id}</code>
                     </td>
+                    <td>{profile.role === "admin" ? "管理员" : "业务员"}</td>
+                    <td>{profile.active ? "已启用" : "已停用"}</td>
                     <td>
-                      <label>
-                        <span className="sr-only">
-                          角色 - {profile.displayName}
-                        </span>
-                        <select
-                          aria-label={`角色 - ${profile.displayName}`}
-                          onChange={(event) =>
-                            void onUpdate(profile, {
-                              role: event.target.value as UserRole,
-                              active: profile.active,
-                            })
-                          }
-                          value={profile.role}
-                        >
-                          <option value="admin">管理员</option>
-                          <option value="sales">业务员</option>
-                        </select>
-                      </label>
-                    </td>
-                    <td>
-                      <label className="toggle-field">
-                        <input
-                          aria-label={`启用 - ${profile.displayName}`}
-                          checked={profile.active}
-                          onChange={(event) =>
-                            void onUpdate(profile, {
-                              role: profile.role,
-                              active: event.target.checked,
-                            })
-                          }
-                          type="checkbox"
-                        />
-                        <span>{profile.active ? "已启用" : "已停用"}</span>
-                      </label>
+                      <Button
+                        aria-label={`编辑账号 ${profile.displayName}`}
+                        icon={<Pencil aria-hidden="true" size={15} />}
+                        onClick={() => openEdit(profile)}
+                      >
+                        编辑
+                      </Button>
                     </td>
                   </tr>
                 ))}
@@ -166,12 +201,12 @@ export function AccountsPage({
         )}
       </section>
 
-      {showForm ? (
+      {formOpen ? (
         <div className="drawer-layer">
           <button
-            aria-label="关闭新增账号"
+            aria-label={isEditing ? "关闭编辑账号" : "关闭新增账号"}
             className="drawer-backdrop"
-            onClick={() => setShowForm(false)}
+            onClick={closeForm}
             type="button"
           />
           <section
@@ -183,12 +218,14 @@ export function AccountsPage({
             <header className="drawer-header">
               <div>
                 <p className="eyebrow">Supabase Auth</p>
-                <h2 id="account-form-title">新增账号</h2>
+                <h2 id="account-form-title">
+                  {isEditing ? "编辑账号" : "新增账号"}
+                </h2>
               </div>
               <button
-                aria-label="关闭新增账号"
+                aria-label={isEditing ? "关闭编辑账号" : "关闭新增账号"}
                 className="icon-button"
-                onClick={() => setShowForm(false)}
+                onClick={closeForm}
                 type="button"
               >
                 <X aria-hidden="true" size={20} />
@@ -208,7 +245,7 @@ export function AccountsPage({
                   />
                 </label>
                 <label className="field">
-                  <span>邮箱 *</span>
+                  <span>登录邮箱 *</span>
                   <input
                     aria-label="账号邮箱"
                     autoComplete="email"
@@ -220,13 +257,14 @@ export function AccountsPage({
                   />
                 </label>
                 <label className="field">
-                  <span>初始密码 *</span>
+                  <span>{isEditing ? "新密码" : "初始密码 *"}</span>
                   <input
-                    aria-label="初始密码"
+                    aria-label={isEditing ? "新密码" : "初始密码"}
                     autoComplete="new-password"
                     onChange={(event) =>
                       setForm({ ...form, password: event.target.value })
                     }
+                    placeholder={isEditing ? "留空则不修改密码" : ""}
                     type="password"
                     value={form.password}
                   />
@@ -247,6 +285,19 @@ export function AccountsPage({
                     <option value="admin">管理员</option>
                   </select>
                 </label>
+                {isEditing ? (
+                  <label className="toggle-field field--full">
+                    <input
+                      aria-label="账号启用状态"
+                      checked={form.active}
+                      onChange={(event) =>
+                        setForm({ ...form, active: event.target.checked })
+                      }
+                      type="checkbox"
+                    />
+                    <span>{form.active ? "账号已启用" : "账号已停用"}</span>
+                  </label>
+                ) : null}
               </div>
 
               {formError ? (
@@ -256,9 +307,13 @@ export function AccountsPage({
               ) : null}
 
               <div className="form-actions">
-                <Button onClick={() => setShowForm(false)}>取消</Button>
+                <Button onClick={closeForm}>取消</Button>
                 <Button disabled={saving} type="submit" variant="primary">
-                  {saving ? "创建中" : "创建账号"}
+                  {saving
+                    ? "保存中"
+                    : isEditing
+                      ? "保存修改"
+                      : "创建账号"}
                 </Button>
               </div>
             </form>

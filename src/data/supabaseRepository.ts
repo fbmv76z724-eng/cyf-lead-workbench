@@ -13,6 +13,7 @@ import {
   type CreateAccountInput,
   type CreateOfflineLeadInput,
   type LeadRepository,
+  type UpdateAccountInput,
 } from "./repository";
 import { filterLeads } from "./selectors";
 
@@ -96,6 +97,7 @@ function mapProfileRow(row: Row): UserProfile {
   return {
     id: String(row.id),
     displayName: String(row.display_name ?? ""),
+    email: String(row.email ?? ""),
     role: row.role === "admin" ? "admin" : "sales",
     active: row.active !== false,
   };
@@ -294,31 +296,30 @@ export function createSupabaseRepository(
     async listProfiles() {
       const result = await client
         .from("profiles")
-        .select("id, display_name, role, active")
+        .select("id, display_name, email, role, active")
         .order("display_name");
       if (result.error) throw new Error(result.error.message);
       return (result.data ?? []).map((row) => mapProfileRow(row as Row));
     },
     async createAccount(input: CreateAccountInput) {
       const result = await client.functions.invoke("admin-users", {
-        body: input,
+        body: {
+          action: "create",
+          ...input,
+        },
       });
       if (result.error) throw new Error(result.error.message);
       return mapProfileRow(result.data as Row);
     },
-    async updateProfile(id, changes) {
-      const result = await client
-        .from("profiles")
-        .update({
-          role: changes.role,
-          active: changes.active,
-        })
-        .eq("id", id)
-        .select("id, display_name, role, active")
-        .single();
-      return mapProfileRow(
-        assertResult(result.data as Row | null, result.error),
-      );
+    async updateAccount(input: UpdateAccountInput) {
+      const result = await client.functions.invoke("admin-users", {
+        body: {
+          action: "update",
+          ...input,
+        },
+      });
+      if (result.error) throw new Error(result.error.message);
+      return mapProfileRow(result.data as Row);
     },
     async sync() {
       await load();

@@ -68,19 +68,76 @@ Deno.serve(async (request) => {
   }
 
   const body = await request.json().catch(() => null);
+  const action = body?.action === "update" ? "update" : "create";
   const email = typeof body?.email === "string" ? body.email.trim() : "";
   const displayName =
     typeof body?.displayName === "string" ? body.displayName.trim() : "";
   const password = typeof body?.password === "string" ? body.password : "";
   const role = body?.role === "admin" ? "admin" : "sales";
+  const active = body?.active !== false;
 
-  if (
-    !email ||
-    !displayName ||
-    password.length < 8 ||
-    !["admin", "sales"].includes(role)
-  ) {
+  if (!email || !displayName || !["admin", "sales"].includes(role)) {
     return json({ error: "INVALID_ACCOUNT_INPUT" }, 400);
+  }
+
+  if (action === "update") {
+    const targetId = typeof body?.id === "string" ? body.id : "";
+    if (!targetId) {
+      return json({ error: "ACCOUNT_ID_REQUIRED" }, 400);
+    }
+    if (password && password.length < 8) {
+      return json({ error: "PASSWORD_TOO_SHORT" }, 400);
+    }
+    if (
+      targetId === user.id &&
+      (role !== "admin" || active !== true)
+    ) {
+      return json({ error: "CANNOT_DISABLE_CURRENT_ADMIN" }, 400);
+    }
+
+    const updatePayload: {
+      email: string;
+      email_confirm: true;
+      user_metadata: { display_name: string };
+      password?: string;
+    } = {
+      email,
+      email_confirm: true,
+      user_metadata: {
+        display_name: displayName,
+      },
+    };
+    if (password) updatePayload.password = password;
+
+    const { error: authUpdateError } =
+      await serviceClient.auth.admin.updateUserById(
+        targetId,
+        updatePayload,
+      );
+    if (authUpdateError) {
+      return json({ error: authUpdateError.message }, 400);
+    }
+
+    const { data: profile, error: profileError } = await serviceClient
+      .from("profiles")
+      .update({
+        email,
+        display_name: displayName,
+        role,
+        active,
+      })
+      .eq("id", targetId)
+      .select("id, display_name, email, role, active")
+      .single();
+
+    if (profileError) {
+      return json({ error: profileError.message }, 400);
+    }
+    return json(profile);
+  }
+
+  if (password.length < 8) {
+    return json({ error: "PASSWORD_TOO_SHORT" }, 400);
   }
 
   const { data: created, error: createError } =
@@ -106,12 +163,13 @@ Deno.serve(async (request) => {
       {
         id: created.user.id,
         display_name: displayName,
+        email,
         role,
         active: true,
       },
       { onConflict: "id" },
     )
-    .select("id, display_name, role, active")
+    .select("id, display_name, email, role, active")
     .single();
 
   if (profileError) {
