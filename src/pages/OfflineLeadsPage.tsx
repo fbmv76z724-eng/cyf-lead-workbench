@@ -12,6 +12,26 @@ interface OfflineLeadsPageProps {
   onFollowUp: (lead: Lead) => void;
 }
 
+const intentionAreas = [
+  "西昌市",
+  "会理市",
+  "德昌县",
+  "冕宁县",
+  "盐源县",
+  "越西县",
+  "会东县",
+  "宁南县",
+  "普格县",
+  "布拖县",
+  "金阳县",
+  "昭觉县",
+  "喜德县",
+  "甘洛县",
+  "美姑县",
+  "雷波县",
+  "木里藏族自治县",
+];
+
 const defaultForm: CreateOfflineLeadInput = {
   name: "",
   phone: "",
@@ -145,22 +165,19 @@ export function OfflineLeadsPage({
                   ) : null}
                 </label>
                 <label className="field">
-                  <span>城市</span>
-                  <input
-                    onChange={(event) =>
-                      setForm({ ...form, city: event.target.value })
-                    }
-                    value={form.city}
-                  />
-                </label>
-                <label className="field">
                   <span>期望区域</span>
-                  <input
+                  <select
                     onChange={(event) =>
                       setForm({ ...form, intentionArea: event.target.value })
                     }
                     value={form.intentionArea}
-                  />
+                  >
+                    {intentionAreas.map((area) => (
+                      <option key={area} value={area}>
+                        {area}
+                      </option>
+                    ))}
+                  </select>
                 </label>
                 <label className="field">
                   <span>渠道</span>
