@@ -1,0 +1,48 @@
+:root {
+  color-scheme: light;
+  font-family:
+    "Source Sans 3",
+    "Noto Sans SC",
+    "PingFang SC",
+    "Microsoft YaHei",
+    sans-serif;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+
+  --color-primary: #2563eb;
+  --color-primary-strong: #1d4ed8;
+  --color-primary-soft: #eaf1ff;
+  --color-on-primary: #ffffff;
+  --color-accent: #059669;
+  --color-accent-strong: #047857;
+  --color-background: #f5f7fb;
+  --color-surface: #ffffff;
+  --color-foreground: #0f172a;
+  --color-muted: #f1f5fd;
+  --color-muted-foreground: #52627a;
+  --color-border: #dce5f2;
+  --color-border-strong: #c5d2e5;
+  --color-warning: #b45309;
+  --color-warning-soft: #fff7e6;
+  --color-destructive: #dc2626;
+  --color-destructive-soft: #fff0f0;
+  --color-success: #047857;
+  --color-success-soft: #e9f9f2;
+  --color-slate-soft: #edf1f7;
+
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 12px;
+  --space-lg: 16px;
+  --space-xl: 24px;
+  --space-2xl: 32px;
+
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.05);
+  --shadow-md: 0 6px 18px rgba(15, 23, 42, 0.08);
+  --shadow-lg: 0 18px 50px rgba(15, 23, 42, 0.16);
+  --sidebar-width: 232px;
+  --bottom-nav-height: 68px;
+}
