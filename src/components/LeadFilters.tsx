@@ -40,7 +40,7 @@ export function LeadFilters({
       </label>
 
       <label className="field">
-        <span>来源</span>
+        <span>数据来源</span>
         <select
           onChange={(event) =>
             update("source", event.target.value as LeadFilterValue["source"])
@@ -50,6 +50,23 @@ export function LeadFilters({
           <option value="all">全部来源</option>
           <option value="cyf">CYF 线索</option>
           <option value="offline">线下线索</option>
+        </select>
+      </label>
+
+      <label className="field">
+        <span>线索来源</span>
+        <select
+          onChange={(event) =>
+            update("origin", event.target.value as LeadFilterValue["origin"])
+          }
+          value={value.origin}
+        >
+          <option value="all">全部来源</option>
+          <option value="online">线上</option>
+          <option value="offline">线下</option>
+          <option value="referral">司机介绍</option>
+          <option value="paid">付费</option>
+          <option value="other">其他</option>
         </select>
       </label>
 
@@ -127,6 +144,24 @@ export function LeadFilters({
           <option value="failed">同步失败</option>
           <option value="local_only">仅本地</option>
         </select>
+      </label>
+
+      <label className="field">
+        <span>流入开始日期</span>
+        <input
+          onChange={(event) => update("dateFrom", event.target.value)}
+          type="date"
+          value={value.dateFrom}
+        />
+      </label>
+
+      <label className="field">
+        <span>流入结束日期</span>
+        <input
+          onChange={(event) => update("dateTo", event.target.value)}
+          type="date"
+          value={value.dateTo}
+        />
       </label>
 
       {compact ? (

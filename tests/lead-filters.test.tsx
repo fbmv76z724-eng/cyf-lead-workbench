@@ -4,15 +4,56 @@ import { vi } from "vitest";
 import { mockFollowUps, mockLeads } from "../src/data/mockLeads";
 import { filterLeads, emptyLeadFilters } from "../src/data/selectors";
 import { LeadsPage } from "../src/pages/LeadsPage";
+import { toLocalDateInputKey } from "../src/utils/format";
 
-it("filters offline leads by status", () => {
-  const result = filterLeads(mockLeads, {
+const offlineLead = {
+  ...mockLeads[0],
+  id: "test-offline",
+  source: "offline" as const,
+  channelType: "转介绍",
+  inCompanyTime: "2026-09-15T14:00:00+08:00",
+  localStatus: "待跟进" as const,
+};
+
+it("filters referral leads and an inclusive inflow date range", () => {
+  const referralLeads = filterLeads([...mockLeads, offlineLead], {
     ...emptyLeadFilters,
-    source: "offline",
-    localStatus: "待跟进",
+    origin: "referral",
   });
+  expect(referralLeads).toHaveLength(1);
+  expect(referralLeads[0].channelType).toBe("转介绍");
+
+  const dailyLeads = filterLeads(mockLeads, {
+    ...emptyLeadFilters,
+    dateFrom: "2026-09-15",
+    dateTo: "2026-09-15",
+  });
+  expect(dailyLeads).toHaveLength(8);
+  expect(
+    dailyLeads.every(
+      (lead) => toLocalDateInputKey(lead.inCompanyTime) === "2026-09-15",
+    ),
+  ).toBe(true);
+});
+
+it("finds a lead by its full phone number while the list shows a masked value", () => {
+  const result = filterLeads(
+    [
+      {
+        ...mockLeads[0],
+        id: "lead-full-phone",
+        phoneMasked: "191****5089",
+        phoneFull: "19136005089",
+      },
+    ],
+    {
+    ...emptyLeadFilters,
+      search: "19136005089",
+    },
+  );
+
   expect(result).toHaveLength(1);
-  expect(result[0].source).toBe("offline");
+  expect(result[0].id).toBe("lead-full-phone");
 });
 
 it("applies search filters", async () => {
@@ -30,8 +71,11 @@ it("applies search filters", async () => {
   );
   await userEvent.type(
     screen.getByLabelText("搜索司机ID或手机号"),
-    "2000000000000001",
+    "2885118908860505",
   );
-  expect(screen.getAllByText("ID 2000000000000001")).toHaveLength(2);
-  expect(screen.queryByText("ID 2000000000000002")).not.toBeInTheDocument();
+  expect(screen.getByLabelText("流入开始日期")).toBeVisible();
+  expect(screen.getByLabelText("流入结束日期")).toBeVisible();
+  expect(screen.getByLabelText("线索来源")).toBeVisible();
+  expect(screen.getAllByText("ID 2885118908860505")).toHaveLength(2);
+  expect(screen.queryByText("ID 2885118908785293")).not.toBeInTheDocument();
 });

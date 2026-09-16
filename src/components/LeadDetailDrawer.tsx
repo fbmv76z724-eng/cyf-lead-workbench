@@ -50,7 +50,9 @@ export function LeadDetailDrawer({
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
   const [feedback, setFeedback] = useState("");
-  const [fullPhone, setFullPhone] = useState("");
+  const [revealedPhone, setRevealedPhone] = useState("");
+  const [phoneError, setPhoneError] = useState("");
+  const [revealingPhone, setRevealingPhone] = useState(false);
 
   useEffect(() => {
     if (!open) return;
@@ -58,7 +60,9 @@ export function LeadDetailDrawer({
     setForm(initialForm);
     setErrors({});
     setFeedback("");
-    setFullPhone("");
+    setRevealedPhone("");
+    setPhoneError("");
+    setRevealingPhone(false);
   }, [open, lead?.id]);
 
   useEffect(() => {
@@ -104,8 +108,22 @@ export function LeadDetailDrawer({
   };
 
   const revealPhone = async () => {
-    const value = await onRevealPhone(lead);
-    setFullPhone(value || "暂未获取到完整号码");
+    if (revealingPhone) return;
+
+    setPhoneError("");
+    setRevealingPhone(true);
+    try {
+      const value = await onRevealPhone(lead);
+      if (!value) {
+        setPhoneError("暂未获取到完整号码，请重试");
+        return;
+      }
+      setRevealedPhone(value);
+    } catch {
+      setPhoneError("获取手机号失败，请重试");
+    } finally {
+      setRevealingPhone(false);
+    }
   };
 
   return (
@@ -145,12 +163,26 @@ export function LeadDetailDrawer({
           <div className="detail-summary">
             <div>
               <span>手机号</span>
-              <strong>{fullPhone || lead.phoneMasked}</strong>
-              {!fullPhone ? (
-                <button className="text-button" onClick={revealPhone} type="button">
+              <strong>{revealedPhone || lead.phoneMasked}</strong>
+              {!revealedPhone ? (
+                <button
+                  className="text-button"
+                  disabled={revealingPhone}
+                  onClick={revealPhone}
+                  type="button"
+                >
                   <Eye aria-hidden="true" size={15} />
-                  查看完整号码
+                  {revealingPhone
+                    ? "获取中"
+                    : phoneError
+                      ? "重试获取"
+                      : "查看完整号码"}
                 </button>
+              ) : null}
+              {phoneError ? (
+                <small className="field-error" role="alert">
+                  {phoneError}
+                </small>
               ) : null}
             </div>
             <div>
@@ -262,11 +294,13 @@ export function LeadDetailDrawer({
                   value={form.possibleJoin}
                 >
                   <option value="">请选择</option>
-                  {Object.entries(POSSIBLE_JOIN_LABELS).map(([code, label]) => (
-                    <option key={code} value={code}>
-                      {label}
-                    </option>
-                  ))}
+                  {Object.entries(POSSIBLE_JOIN_LABELS)
+                    .filter(([code]) => Number(code) >= 0)
+                    .map(([code, label]) => (
+                      <option key={code} value={code}>
+                        {label}
+                      </option>
+                    ))}
                 </select>
                 {errors.possibleJoin ? (
                   <small className="field-error">{errors.possibleJoin}</small>

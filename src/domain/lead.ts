@@ -8,7 +8,7 @@ export type SyncState =
   | "local_only";
 
 export type LinkStatus = 0 | 1 | 2 | 3 | 4;
-export type PossibleJoin = 0 | 1 | 2;
+export type PossibleJoin = -1 | 0 | 1 | 2;
 export type LocalFollowStatus =
   | "待跟进"
   | "跟进中"
@@ -55,6 +55,7 @@ export const LINK_STATUS_LABELS: Record<LinkStatus, string> = {
 };
 
 export const POSSIBLE_JOIN_LABELS: Record<PossibleJoin, string> = {
+  "-1": "未标记",
   0: "无意向",
   1: "意向高",
   2: "意向一般",

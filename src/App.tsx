@@ -5,6 +5,7 @@ import {
   type CreateOfflineLeadInput,
 } from "./data/repository";
 import { mockFollowUps, mockLeads } from "./data/mockLeads";
+import { mockOnboardingRecords } from "./data/mockOnboarding";
 import type { FollowUpInput } from "./domain/followUp";
 import type { Lead } from "./domain/lead";
 import type { PageId } from "./domain/navigation";
@@ -63,6 +64,7 @@ export default function App() {
           leads={leads}
           lastSyncLabel={lastSyncLabel}
           onNavigate={setCurrentPage}
+          onboardingRecords={mockOnboardingRecords}
           onSync={handleSync}
           syncing={syncing}
         />

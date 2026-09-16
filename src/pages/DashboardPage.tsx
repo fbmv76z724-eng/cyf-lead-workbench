@@ -8,7 +8,11 @@ import {
 } from "lucide-react";
 import type { Lead } from "../domain/lead";
 import type { PageId } from "../domain/navigation";
-import { getDashboardMetrics } from "../data/selectors";
+import type { OnboardingRecord } from "../domain/onboarding";
+import {
+  getDashboardMetrics,
+  getPeriodComparisonMetrics,
+} from "../data/selectors";
 import { formatDateTime, formatLinkStatus } from "../utils/format";
 import { KpiCard } from "../components/KpiCard";
 import { StatusBadge } from "../components/StatusBadge";
@@ -16,6 +20,7 @@ import { SyncHealthPanel } from "../components/SyncHealthPanel";
 
 interface DashboardPageProps {
   leads: Lead[];
+  onboardingRecords?: OnboardingRecord[];
   lastSyncLabel?: string;
   onNavigate: (page: PageId) => void;
   syncing?: boolean;
@@ -24,12 +29,20 @@ interface DashboardPageProps {
 
 export function DashboardPage({
   leads,
+  onboardingRecords = [],
   lastSyncLabel,
   onNavigate,
   syncing = false,
   onSync,
 }: DashboardPageProps) {
   const metrics = getDashboardMetrics(leads);
+  const periods = getPeriodComparisonMetrics(leads, onboardingRecords);
+  const periodRows = [
+    { key: "today", label: "今日", metrics: periods.today },
+    { key: "thisWeek", label: "本周", metrics: periods.thisWeek },
+    { key: "lastWeek", label: "上周", metrics: periods.lastWeek },
+    { key: "thisMonth", label: "本月", metrics: periods.thisMonth },
+  ];
   const maxFunnel = Math.max(...metrics.funnel.map((point) => point.count), 1);
   const recentQueue = [...leads]
     .filter(
@@ -104,6 +117,96 @@ export function DashboardPage({
           tone="red"
           value={metrics.syncIssues}
         />
+      </section>
+
+      <section className="panel period-panel" aria-labelledby="period-title">
+        <div className="panel-heading">
+          <div>
+            <p className="eyebrow">CYF 线索口径</p>
+            <h2 id="period-title">经营周期对比</h2>
+          </div>
+          <p>上岗数据按同期计算</p>
+        </div>
+
+        <div
+          aria-label="今日、本周、上周和本月线索转化数据"
+          className="period-table"
+          role="table"
+        >
+          <div className="period-table__head" role="row">
+            <span role="columnheader">周期</span>
+            <span role="columnheader">流入线索</span>
+            <span role="columnheader">上岗司机</span>
+            <span role="columnheader">转化率</span>
+            <span role="columnheader">外呼</span>
+          </div>
+          {periodRows.map((row, index) => (
+            <div
+              className="period-table__row"
+              data-current={index === 0 ? "true" : undefined}
+              key={row.key}
+              role="row"
+            >
+              <strong className="period-table__period" role="cell">
+                {row.label}
+              </strong>
+              <span role="cell">{row.metrics.inflow}</span>
+              <span role="cell">{row.metrics.onboarded}</span>
+              <span className="period-table__rate" role="cell">
+                {row.metrics.conversionRate}%
+              </span>
+              <span role="cell">{row.metrics.calls}</span>
+            </div>
+          ))}
+        </div>
+        <p className="period-method">
+          线索转化率 = 同期上岗司机数 ÷ 同期流入线索数
+        </p>
+      </section>
+
+      <section className="panel period-panel" aria-labelledby="onboarding-title">
+        <div className="panel-heading">
+          <div>
+            <p className="eyebrow">CYF 已上岗口径</p>
+            <h2 id="onboarding-title">司机上岗结构</h2>
+          </div>
+          <p>按上岗时间统计</p>
+        </div>
+
+        <div
+          aria-label="今日、本周、上周和本月司机上岗结构"
+          className="period-table"
+          role="table"
+        >
+          <div className="period-table__head" role="row">
+            <span role="columnheader">周期</span>
+            <span role="columnheader">上岗司机</span>
+            <span role="columnheader">滴滴司机</span>
+            <span role="columnheader">新桔司机</span>
+            <span role="columnheader">纯新司机</span>
+          </div>
+          {periodRows.map((row, index) => (
+            <div
+              className="period-table__row"
+              data-current={index === 0 ? "true" : undefined}
+              key={row.key}
+              role="row"
+            >
+              <strong className="period-table__period" role="cell">
+                {row.label}
+              </strong>
+              <span className="period-table__rate" role="cell">
+                {row.metrics.onboarding.total}
+              </span>
+              <span role="cell">{row.metrics.onboarding.didi}</span>
+              <span role="cell">{row.metrics.onboarding.xinju}</span>
+              <span role="cell">{row.metrics.onboarding.newDrivers}</span>
+            </div>
+          ))}
+        </div>
+        <p className="period-method">
+          上岗总数按 CYF 招募流程“已上岗”去重；滴滴、新桔按司机身份统计，纯新按司机类型统计。
+        </p>
       </section>
 
       <div className="dashboard-grid">
@@ -227,66 +330,113 @@ interface TrendChartProps {
   points: Array<{ label: string; inflow: number; calls: number }>;
 }
 
+function getTrendScale(points: TrendChartProps["points"]) {
+  const dataMax = Math.max(
+    ...points.flatMap((point) => [point.inflow, point.calls]),
+    1,
+  );
+  const roughStep = dataMax / 4;
+  const magnitude = 10 ** Math.floor(Math.log10(roughStep));
+  const normalized = roughStep / magnitude;
+  const niceNormalized =
+    normalized <= 1 ? 1 : normalized <= 2 ? 2 : normalized <= 5 ? 5 : 10;
+  const step = Math.max(1, niceNormalized * magnitude);
+  const max = Math.ceil(dataMax / step) * step;
+
+  return {
+    max,
+    ticks: Array.from(
+      { length: Math.round(max / step) + 1 },
+      (_, index) => index * step,
+    ),
+  };
+}
+
 function TrendChart({ points }: TrendChartProps) {
-  const width = 560;
-  const height = 190;
-  const padding = 24;
-  const max = Math.max(...points.flatMap((point) => [point.inflow, point.calls]), 1);
+  const { max, ticks } = getTrendScale(points);
+  const plotTop = 8;
+  const plotHeight = 88;
+  const plotInset = 8;
   const x = (index: number) =>
-    padding + (index * (width - padding * 2)) / Math.max(points.length - 1, 1);
-  const y = (value: number) =>
-    height - padding - (value / max) * (height - padding * 2);
+    plotInset +
+    (index / Math.max(points.length - 1, 1)) * (100 - plotInset * 2);
+  const y = (value: number) => plotTop + plotHeight - (value / max) * plotHeight;
   const line = (key: "inflow" | "calls") =>
     points.map((point, index) => `${x(index)},${y(point[key])}`).join(" ");
 
   return (
     <div className="trend-chart">
       <div className="chart-legend">
-        <span>
-          <i className="legend-line legend-line--inflow" /> 流入
+        <span className="chart-legend__item">
+          <i aria-hidden="true" className="legend-line legend-line--inflow" />
+          流入
         </span>
-        <span>
-          <i className="legend-line legend-line--calls" /> 外呼
+        <span className="chart-legend__item">
+          <i aria-hidden="true" className="legend-line legend-line--calls" />
+          外呼
         </span>
       </div>
-      <svg
-        aria-label="最近七天流入与外呼趋势图"
-        className="trend-svg"
-        role="img"
-        viewBox={`0 0 ${width} ${height}`}
-      >
-        {[0, 0.5, 1].map((ratio) => (
-          <line
-            className="chart-grid-line"
-            key={ratio}
-            x1={padding}
-            x2={width - padding}
-            y1={padding + ratio * (height - padding * 2)}
-            y2={padding + ratio * (height - padding * 2)}
-          />
-        ))}
-        <polyline className="chart-line chart-line--inflow" points={line("inflow")} />
-        <polyline className="chart-line chart-line--calls" points={line("calls")} />
-        {points.map((point, index) => (
-          <g key={point.label}>
-            <circle
+      <div className="trend-plot">
+        <div aria-hidden="true" className="trend-y-axis">
+          {ticks.map((tick) => (
+            <span key={tick} style={{ top: `${y(tick)}%` }}>
+              {tick}
+            </span>
+          ))}
+        </div>
+        <div
+          aria-label="最近七天流入与外呼趋势图"
+          className="trend-canvas"
+          role="img"
+        >
+          <svg
+            aria-hidden="true"
+            className="trend-svg"
+            preserveAspectRatio="none"
+            viewBox="0 0 100 100"
+          >
+            {ticks.map((tick) => (
+              <line
+                className="chart-grid-line"
+                key={tick}
+                x1={plotInset}
+                x2={100 - plotInset}
+                y1={y(tick)}
+                y2={y(tick)}
+              />
+            ))}
+            <polyline
+              className="chart-line chart-line--inflow"
+              points={line("inflow")}
+            />
+            <polyline
+              className="chart-line chart-line--calls"
+              points={line("calls")}
+            />
+          </svg>
+          {points.map((point, index) => (
+            <span
+              aria-hidden="true"
               className="chart-point chart-point--inflow"
-              cx={x(index)}
-              cy={y(point.inflow)}
-              r="3.5"
+              key={`${point.label}-inflow`}
+              style={{ left: `${x(index)}%`, top: `${y(point.inflow)}%` }}
             />
-            <circle
+          ))}
+          {points.map((point, index) => (
+            <span
+              aria-hidden="true"
               className="chart-point chart-point--calls"
-              cx={x(index)}
-              cy={y(point.calls)}
-              r="3.5"
+              key={`${point.label}-calls`}
+              style={{ left: `${x(index)}%`, top: `${y(point.calls)}%` }}
             />
-            <text className="chart-label" textAnchor="middle" x={x(index)} y={height - 5}>
-              {point.label}
-            </text>
-          </g>
-        ))}
-      </svg>
+          ))}
+        </div>
+        <div aria-hidden="true" className="trend-x-axis">
+          {points.map((point) => (
+            <span key={point.label}>{point.label}</span>
+          ))}
+        </div>
+      </div>
     </div>
   );
 }

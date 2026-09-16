@@ -46,3 +46,33 @@ it("submits a valid follow-up and shows feedback", async () => {
     await screen.findByText("跟进记录已保存，等待同步到 CYF。"),
   ).toBeVisible();
 });
+
+it("keeps the masked phone and offers a retry when reveal fails", async () => {
+  const onRevealPhone = vi
+    .fn()
+    .mockResolvedValueOnce(undefined)
+    .mockResolvedValueOnce("19136005089");
+
+  render(
+    <LeadDetailDrawer
+      history={[]}
+      lead={mockLeads[0]}
+      onClose={vi.fn()}
+      onRevealPhone={onRevealPhone}
+      onSubmitFollowUp={vi.fn()}
+      open
+    />,
+  );
+
+  await userEvent.click(screen.getByRole("button", { name: "查看完整号码" }));
+
+  expect(
+    await screen.findByText("暂未获取到完整号码，请重试"),
+  ).toBeVisible();
+  expect(screen.getByText(mockLeads[0].phoneMasked)).toBeVisible();
+
+  await userEvent.click(screen.getByRole("button", { name: "重试获取" }));
+
+  expect(await screen.findByText("19136005089")).toBeVisible();
+  expect(onRevealPhone).toHaveBeenCalledTimes(2);
+});

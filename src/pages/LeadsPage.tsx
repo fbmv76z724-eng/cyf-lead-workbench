@@ -71,7 +71,11 @@ export function LeadsPage({
             </span>
           ) : null}
         </div>
-        <LeadList leads={filteredLeads} onSelect={onSelect} />
+        <LeadList
+          leads={filteredLeads}
+          onRevealPhone={onRevealPhone}
+          onSelect={onSelect}
+        />
       </section>
 
       <LeadDetailDrawer
