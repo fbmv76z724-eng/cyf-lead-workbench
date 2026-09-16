@@ -89,7 +89,13 @@ export function getLeadOrigin(channelType: string): LeadOrigin {
   const normalized = channelType.trim();
 
   if (normalized === "线上") return "online";
-  if (normalized === "线下" || normalized === "门店") return "offline";
+  if (
+    normalized === "线下" ||
+    normalized === "门店" ||
+    normalized === "招聘网站"
+  ) {
+    return "offline";
+  }
   if (normalized === "转介绍" || normalized === "司机介绍") {
     return "referral";
   }

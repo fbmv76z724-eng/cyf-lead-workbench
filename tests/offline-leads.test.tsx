@@ -8,6 +8,8 @@ it("creates a local-only offline lead", async () => {
   render(<OfflineLeadsPage leads={[]} onCreate={onCreate} onFollowUp={vi.fn()} />);
 
   await userEvent.click(screen.getByRole("button", { name: "新增线下线索" }));
+  expect(screen.getByRole("option", { name: "司机介绍" })).toHaveValue("司机介绍");
+  expect(screen.getByRole("option", { name: "招聘网站" })).toHaveValue("招聘网站");
   await userEvent.type(screen.getByLabelText("姓名"), "测试用户");
   await userEvent.type(screen.getByLabelText("手机号"), "13800000000");
   await userEvent.click(screen.getByRole("button", { name: "保存" }));

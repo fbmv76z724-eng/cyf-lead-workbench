@@ -2,7 +2,11 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { vi } from "vitest";
 import { mockFollowUps, mockLeads } from "../src/data/mockLeads";
-import { filterLeads, emptyLeadFilters } from "../src/data/selectors";
+import {
+  emptyLeadFilters,
+  filterLeads,
+  getLeadOrigin,
+} from "../src/data/selectors";
 import { LeadsPage } from "../src/pages/LeadsPage";
 import { toLocalDateInputKey } from "../src/utils/format";
 
@@ -34,6 +38,13 @@ it("filters referral leads and an inclusive inflow date range", () => {
       (lead) => toLocalDateInputKey(lead.inCompanyTime) === "2026-09-15",
     ),
   ).toBe(true);
+});
+
+it("classifies recruitment-website leads as offline", () => {
+  expect(getLeadOrigin("招聘网站")).toBe("offline");
+  expect(getLeadOrigin("司机介绍")).toBe("referral");
+  expect(getLeadOrigin("门店")).toBe("offline");
+  expect(getLeadOrigin("转介绍")).toBe("referral");
 });
 
 it("finds a lead by its full phone number while the list shows a masked value", () => {

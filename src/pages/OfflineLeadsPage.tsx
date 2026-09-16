@@ -49,7 +49,7 @@ export function OfflineLeadsPage({
         <div>
           <p className="eyebrow">仅本地保存</p>
           <h1>线下线索</h1>
-          <p>用于记录门店、转介绍等尚未进入 CYF 的线索。</p>
+          <p>用于记录司机介绍、招聘网站等尚未进入 CYF 的线索。</p>
         </div>
         <Button
           icon={<Plus aria-hidden="true" size={17} />}
@@ -171,8 +171,8 @@ export function OfflineLeadsPage({
                     value={form.channelType}
                   >
                     <option value="线下">线下</option>
-                    <option value="转介绍">转介绍</option>
-                    <option value="门店">门店</option>
+                    <option value="司机介绍">司机介绍</option>
+                    <option value="招聘网站">招聘网站</option>
                   </select>
                 </label>
                 <label className="field">
