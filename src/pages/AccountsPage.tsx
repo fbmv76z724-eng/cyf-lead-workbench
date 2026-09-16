@@ -1,5 +1,8 @@
-import { ShieldCheck, UserRound } from "lucide-react";
+import { useState, type FormEvent } from "react";
+import { Plus, ShieldCheck, UserRound, X } from "lucide-react";
 import type { UserProfile, UserRole } from "../auth/permissions";
+import type { CreateAccountInput } from "../data/repository";
+import { Button } from "../components/Button";
 
 interface AccountsPageProps {
   profiles: UserProfile[];
@@ -9,6 +12,7 @@ interface AccountsPageProps {
     profile: UserProfile,
     changes: Pick<UserProfile, "role" | "active">,
   ) => Promise<void>;
+  onCreate: (input: CreateAccountInput) => Promise<void>;
 }
 
 export function AccountsPage({
@@ -16,15 +20,61 @@ export function AccountsPage({
   loading = false,
   error = "",
   onUpdate,
+  onCreate,
 }: AccountsPageProps) {
+  const [showForm, setShowForm] = useState(false);
+  const [form, setForm] = useState<CreateAccountInput>({
+    email: "",
+    displayName: "",
+    password: "",
+    role: "sales",
+  });
+  const [formError, setFormError] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  const submit = async (event: FormEvent) => {
+    event.preventDefault();
+    setFormError("");
+    if (!form.displayName.trim() || !form.email.trim() || !form.password) {
+      setFormError("请填写姓名、邮箱和初始密码。");
+      return;
+    }
+    if (form.password.length < 8) {
+      setFormError("初始密码至少需要 8 位。");
+      return;
+    }
+
+    setSaving(true);
+    try {
+      await onCreate({
+        ...form,
+        displayName: form.displayName.trim(),
+        email: form.email.trim(),
+      });
+      setForm({ email: "", displayName: "", password: "", role: "sales" });
+      setShowForm(false);
+    } catch {
+      setFormError("账号创建失败，请检查邮箱是否已存在。");
+    } finally {
+      setSaving(false);
+    }
+  };
+
   return (
     <div className="page">
-      <header className="page-header">
+      <header className="page-header page-header--row">
         <div>
           <p className="eyebrow">权限与状态</p>
           <h1>账号管理</h1>
           <p>管理员可调整账号角色和启用状态。</p>
         </div>
+        <Button
+          icon={<Plus aria-hidden="true" size={17} />}
+          onClick={() => setShowForm(true)}
+          variant="primary"
+        >
+          新增账号
+        </Button>
       </header>
 
       {error ? (
@@ -115,6 +165,106 @@ export function AccountsPage({
           </p>
         )}
       </section>
+
+      {showForm ? (
+        <div className="drawer-layer">
+          <button
+            aria-label="关闭新增账号"
+            className="drawer-backdrop"
+            onClick={() => setShowForm(false)}
+            type="button"
+          />
+          <section
+            aria-labelledby="account-form-title"
+            aria-modal="true"
+            className="lead-drawer lead-drawer--form"
+            role="dialog"
+          >
+            <header className="drawer-header">
+              <div>
+                <p className="eyebrow">Supabase Auth</p>
+                <h2 id="account-form-title">新增账号</h2>
+              </div>
+              <button
+                aria-label="关闭新增账号"
+                className="icon-button"
+                onClick={() => setShowForm(false)}
+                type="button"
+              >
+                <X aria-hidden="true" size={20} />
+              </button>
+            </header>
+
+            <form className="drawer-scroll" onSubmit={submit}>
+              <div className="form-grid">
+                <label className="field">
+                  <span>姓名 *</span>
+                  <input
+                    aria-label="账号姓名"
+                    onChange={(event) =>
+                      setForm({ ...form, displayName: event.target.value })
+                    }
+                    value={form.displayName}
+                  />
+                </label>
+                <label className="field">
+                  <span>邮箱 *</span>
+                  <input
+                    aria-label="账号邮箱"
+                    autoComplete="email"
+                    onChange={(event) =>
+                      setForm({ ...form, email: event.target.value })
+                    }
+                    type="email"
+                    value={form.email}
+                  />
+                </label>
+                <label className="field">
+                  <span>初始密码 *</span>
+                  <input
+                    aria-label="初始密码"
+                    autoComplete="new-password"
+                    onChange={(event) =>
+                      setForm({ ...form, password: event.target.value })
+                    }
+                    type="password"
+                    value={form.password}
+                  />
+                </label>
+                <label className="field">
+                  <span>角色</span>
+                  <select
+                    aria-label="角色"
+                    onChange={(event) =>
+                      setForm({
+                        ...form,
+                        role: event.target.value as UserRole,
+                      })
+                    }
+                    value={form.role}
+                  >
+                    <option value="sales">业务员</option>
+                    <option value="admin">管理员</option>
+                  </select>
+                </label>
+              </div>
+
+              {formError ? (
+                <p className="auth-error" role="alert">
+                  {formError}
+                </p>
+              ) : null}
+
+              <div className="form-actions">
+                <Button onClick={() => setShowForm(false)}>取消</Button>
+                <Button disabled={saving} type="submit" variant="primary">
+                  {saving ? "创建中" : "创建账号"}
+                </Button>
+              </div>
+            </form>
+          </section>
+        </div>
+      ) : null}
     </div>
   );
 }

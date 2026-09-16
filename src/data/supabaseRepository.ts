@@ -8,7 +8,9 @@ import type {
   PossibleJoin,
   SyncState,
 } from "../domain/lead";
+import type { OnboardingRecord } from "../domain/onboarding";
 import {
+  type CreateAccountInput,
   type CreateOfflineLeadInput,
   type LeadRepository,
 } from "./repository";
@@ -77,6 +79,19 @@ function mapFollowUpRow(row: Row): FollowUp {
   };
 }
 
+function mapOnboardingRow(row: Row): OnboardingRecord {
+  return {
+    id: String(row.id),
+    driverId: optionalNumber(row.driver_id),
+    onboardedAt: String(row.onboarded_at),
+    identity:
+      row.identity === "didi" || row.identity === "xinju"
+        ? row.identity
+        : "unknown",
+    driverType: String(row.driver_type ?? ""),
+  };
+}
+
 function mapProfileRow(row: Row): UserProfile {
   return {
     id: String(row.id),
@@ -101,6 +116,7 @@ export function createSupabaseRepository(
 ): LeadRepository {
   let leads: Lead[] = [];
   let followUps: FollowUp[] = [];
+  let onboardingRecords: OnboardingRecord[] = [];
   const listeners = new Set<() => void>();
 
   const emit = () => {
@@ -112,7 +128,7 @@ export function createSupabaseRepository(
   };
 
   const load = async () => {
-    const [leadResult, followUpResult] = await Promise.all([
+    const [leadResult, followUpResult, onboardingResult] = await Promise.all([
       client
         .from("leads")
         .select("*")
@@ -121,14 +137,22 @@ export function createSupabaseRepository(
         .from("follow_ups")
         .select("*")
         .order("called_at", { ascending: false }),
+      client
+        .from("onboarding_records")
+        .select("*")
+        .order("onboarded_at", { ascending: false }),
     ]);
 
     if (leadResult.error) throw new Error(leadResult.error.message);
     if (followUpResult.error) throw new Error(followUpResult.error.message);
+    if (onboardingResult.error) throw new Error(onboardingResult.error.message);
 
     leads = (leadResult.data ?? []).map((row) => mapLeadRow(row as Row));
     followUps = (followUpResult.data ?? []).map((row) =>
       mapFollowUpRow(row as Row),
+    );
+    onboardingRecords = (onboardingResult.data ?? []).map((row) =>
+      mapOnboardingRow(row as Row),
     );
     emit();
   };
@@ -156,6 +180,9 @@ export function createSupabaseRepository(
           (a, b) =>
             new Date(b.calledAt).getTime() - new Date(a.calledAt).getTime(),
         );
+    },
+    getOnboardingRecords() {
+      return onboardingRecords;
     },
     async addFollowUp(input: FollowUpInput) {
       const {
@@ -271,6 +298,13 @@ export function createSupabaseRepository(
         .order("display_name");
       if (result.error) throw new Error(result.error.message);
       return (result.data ?? []).map((row) => mapProfileRow(row as Row));
+    },
+    async createAccount(input: CreateAccountInput) {
+      const result = await client.functions.invoke("admin-users", {
+        body: input,
+      });
+      if (result.error) throw new Error(result.error.message);
+      return mapProfileRow(result.data as Row);
     },
     async updateProfile(id, changes) {
       const result = await client

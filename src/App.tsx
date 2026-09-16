@@ -3,16 +3,16 @@ import { AppShell } from "./app/AppShell";
 import { useAuth } from "./auth/AuthProvider";
 import type { UserProfile } from "./auth/permissions";
 import {
+  type CreateAccountInput,
   createMockRepository,
   type CreateOfflineLeadInput,
 } from "./data/repository";
 import { createSupabaseRepository } from "./data/supabaseRepository";
 import { getSupabaseClient } from "./data/supabaseClient";
-import { mockFollowUps, mockLeads } from "./data/mockLeads";
-import { mockOnboardingRecords } from "./data/mockOnboarding";
 import type { FollowUpInput } from "./domain/followUp";
 import type { Lead } from "./domain/lead";
 import type { PageId } from "./domain/navigation";
+import type { OnboardingRecord } from "./domain/onboarding";
 import { DashboardPage } from "./pages/DashboardPage";
 import { LeadsPage } from "./pages/LeadsPage";
 import { OfflineLeadsPage } from "./pages/OfflineLeadsPage";
@@ -42,7 +42,7 @@ export function WorkbenchApp({
     () =>
       client
         ? createSupabaseRepository(client)
-        : createMockRepository(mockLeads, mockFollowUps),
+        : createMockRepository([], []),
     [client],
   );
   const leads = useSyncExternalStore(
@@ -58,11 +58,24 @@ export function WorkbenchApp({
   const [profiles, setProfiles] = useState<UserProfile[]>([]);
   const [profilesLoading, setProfilesLoading] = useState(false);
   const [profilesError, setProfilesError] = useState("");
+  const [onboardingRecords, setOnboardingRecords] = useState<
+    OnboardingRecord[]
+  >([]);
   const isAdmin = profile.role === "admin";
 
   useEffect(() => {
-    void repository.load();
-  }, [repository]);
+    if (!client) {
+      void repository.load();
+      return;
+    }
+    let active = true;
+    void repository.load().then(() => {
+      if (active) setOnboardingRecords(repository.getOnboardingRecords());
+    });
+    return () => {
+      active = false;
+    };
+  }, [client, repository]);
 
   useEffect(() => {
     if (!isAdmin || !client) return;
@@ -146,6 +159,11 @@ export function WorkbenchApp({
     }
   };
 
+  const handleCreateAccount = async (input: CreateAccountInput) => {
+    const created = await repository.createAccount(input);
+    setProfiles((current) => [created, ...current]);
+  };
+
   return (
     <AppShell
       currentPage={currentPage}
@@ -158,7 +176,7 @@ export function WorkbenchApp({
           leads={leads}
           lastSyncLabel={lastSyncLabel}
           onNavigate={setCurrentPage}
-          onboardingRecords={mockOnboardingRecords}
+          onboardingRecords={onboardingRecords}
           onSync={handleSync}
           showAdminTools={isAdmin}
           syncing={syncing}
@@ -209,6 +227,7 @@ export function WorkbenchApp({
         <AccountsPage
           error={profilesError}
           loading={profilesLoading}
+          onCreate={handleCreateAccount}
           onUpdate={handleUpdateProfile}
           profiles={profiles}
         />

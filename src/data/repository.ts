@@ -1,6 +1,7 @@
 import type { UserProfile } from "../auth/permissions";
 import type { FollowUp, FollowUpInput } from "../domain/followUp";
 import type { Lead, LocalFollowStatus } from "../domain/lead";
+import type { OnboardingRecord } from "../domain/onboarding";
 import type { LeadFilters } from "./selectors";
 import { filterLeads } from "./selectors";
 
@@ -14,6 +15,13 @@ export interface CreateOfflineLeadInput {
   remark?: string;
 }
 
+export interface CreateAccountInput {
+  email: string;
+  displayName: string;
+  password: string;
+  role: UserProfile["role"];
+}
+
 export interface SyncResult {
   processed: number;
   failed: number;
@@ -25,11 +33,13 @@ export interface LeadRepository {
   listLeads(filters?: LeadFilters): Lead[];
   getLead(id: string): Lead | undefined;
   getFollowUps(leadId: string): FollowUp[];
+  getOnboardingRecords(): OnboardingRecord[];
   addFollowUp(input: FollowUpInput): Promise<FollowUp>;
   addOfflineLead(input: CreateOfflineLeadInput): Promise<Lead>;
   claimLead(id: string): Promise<Lead>;
   assignLead(id: string, ownerId: string | null): Promise<Lead>;
   listProfiles(): Promise<UserProfile[]>;
+  createAccount(input: CreateAccountInput): Promise<UserProfile>;
   updateProfile(
     id: string,
     changes: Pick<UserProfile, "role" | "active">,
@@ -46,9 +56,11 @@ function createId(prefix: string): string {
 export function createMockRepository(
   initialLeads: Lead[],
   initialFollowUps: FollowUp[],
+  initialOnboardingRecords: OnboardingRecord[] = [],
 ): LeadRepository {
   let leads = initialLeads;
   let followUps = initialFollowUps;
+  const onboardingRecords = initialOnboardingRecords;
   let profiles: UserProfile[] = [];
   const listeners = new Set<() => void>();
 
@@ -71,6 +83,9 @@ export function createMockRepository(
           (a, b) =>
             new Date(b.calledAt).getTime() - new Date(a.calledAt).getTime(),
         );
+    },
+    getOnboardingRecords() {
+      return onboardingRecords;
     },
     async addFollowUp(input) {
       const now = new Date().toISOString();
@@ -154,6 +169,16 @@ export function createMockRepository(
     },
     async listProfiles() {
       return profiles;
+    },
+    async createAccount(input) {
+      const profile: UserProfile = {
+        id: createId("profile"),
+        displayName: input.displayName,
+        role: input.role,
+        active: true,
+      };
+      profiles = [profile, ...profiles];
+      return profile;
     },
     async updateProfile(id, changes) {
       const current = profiles.find((profile) => profile.id === id);
