@@ -20,11 +20,14 @@ export interface SyncResult {
 }
 
 export interface LeadRepository {
+  load(): Promise<void>;
   listLeads(filters?: LeadFilters): Lead[];
   getLead(id: string): Lead | undefined;
   getFollowUps(leadId: string): FollowUp[];
   addFollowUp(input: FollowUpInput): Promise<FollowUp>;
-  addOfflineLead(input: CreateOfflineLeadInput): Lead;
+  addOfflineLead(input: CreateOfflineLeadInput): Promise<Lead>;
+  claimLead(id: string): Promise<Lead>;
+  assignLead(id: string, ownerId: string | null): Promise<Lead>;
   sync(): Promise<SyncResult>;
   subscribe(listener: () => void): () => void;
   getSnapshot(): Lead[];
@@ -47,6 +50,7 @@ export function createMockRepository(
   };
 
   return {
+    async load() {},
     listLeads(filters) {
       return filters ? filterLeads(leads, filters) : leads;
     },
@@ -88,7 +92,7 @@ export function createMockRepository(
       await new Promise((resolve) => window.setTimeout(resolve, 350));
       return followUp;
     },
-    addOfflineLead(input) {
+    async addOfflineLead(input) {
       const now = new Date().toISOString();
       const lead: Lead = {
         id: createId("offline"),
@@ -115,6 +119,31 @@ export function createMockRepository(
       leads = [lead, ...leads];
       emit();
       return lead;
+    },
+    async claimLead(id) {
+      const lead = leads.find((item) => item.id === id);
+      if (!lead) throw new Error("LEAD_NOT_FOUND");
+      if (lead.ownerId) throw new Error("LEAD_ALREADY_CLAIMED");
+      const claimedLead = {
+        ...lead,
+        ownerId: "mock-current-user",
+        claimedAt: new Date().toISOString(),
+      };
+      leads = leads.map((item) => (item.id === id ? claimedLead : item));
+      emit();
+      return claimedLead;
+    },
+    async assignLead(id, ownerId) {
+      const lead = leads.find((item) => item.id === id);
+      if (!lead) throw new Error("LEAD_NOT_FOUND");
+      const assignedLead = {
+        ...lead,
+        ownerId: ownerId ?? undefined,
+        claimedAt: ownerId ? new Date().toISOString() : undefined,
+      };
+      leads = leads.map((item) => (item.id === id ? assignedLead : item));
+      emit();
+      return assignedLead;
     },
     async sync() {
       await new Promise((resolve) => window.setTimeout(resolve, 600));

@@ -42,6 +42,8 @@ export interface Lead {
   followCount: number;
   syncState: SyncState;
   localStatus?: LocalFollowStatus;
+  ownerId?: string;
+  claimedAt?: string;
   createdAt: string;
   updatedAt: string;
 }

@@ -8,7 +8,7 @@ import { formatDateTime } from "../utils/format";
 
 interface OfflineLeadsPageProps {
   leads: Lead[];
-  onCreate: (input: CreateOfflineLeadInput) => Lead;
+  onCreate: (input: CreateOfflineLeadInput) => Promise<Lead>;
   onFollowUp: (lead: Lead) => void;
 }
 
@@ -50,17 +50,26 @@ export function OfflineLeadsPage({
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState(defaultForm);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [saving, setSaving] = useState(false);
   const offlineLeads = leads.filter((lead) => lead.source === "offline");
 
-  const submit = () => {
+  const submit = async () => {
     const nextErrors: Record<string, string> = {};
     if (!form.name.trim()) nextErrors.name = "请输入姓名";
     if (!/^1\d{10}$/.test(form.phone)) nextErrors.phone = "请输入 11 位手机号";
     setErrors(nextErrors);
     if (Object.keys(nextErrors).length) return;
-    onCreate(form);
-    setForm(defaultForm);
-    setShowForm(false);
+
+    setSaving(true);
+    try {
+      await onCreate(form);
+      setForm(defaultForm);
+      setShowForm(false);
+    } catch {
+      setErrors({ form: "保存失败，请重试。" });
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -221,10 +230,15 @@ export function OfflineLeadsPage({
                   />
                 </label>
               </div>
+              {errors.form ? (
+                <p className="auth-error" role="alert">
+                  {errors.form}
+                </p>
+              ) : null}
               <div className="form-actions">
                 <Button onClick={() => setShowForm(false)}>取消</Button>
-                <Button onClick={submit} variant="primary">
-                  保存
+                <Button disabled={saving} onClick={submit} variant="primary">
+                  {saving ? "保存中" : "保存"}
                 </Button>
               </div>
             </div>

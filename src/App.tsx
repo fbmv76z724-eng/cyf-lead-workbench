@@ -1,10 +1,12 @@
-import { useMemo, useState, useSyncExternalStore } from "react";
+import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { AppShell } from "./app/AppShell";
 import { useAuth } from "./auth/AuthProvider";
 import {
   createMockRepository,
   type CreateOfflineLeadInput,
 } from "./data/repository";
+import { createSupabaseRepository } from "./data/supabaseRepository";
+import { getSupabaseClient } from "./data/supabaseClient";
 import { mockFollowUps, mockLeads } from "./data/mockLeads";
 import { mockOnboardingRecords } from "./data/mockOnboarding";
 import type { FollowUpInput } from "./domain/followUp";
@@ -18,9 +20,13 @@ import { SyncPage } from "./pages/SyncPage";
 import { LoginPage } from "./pages/LoginPage";
 
 export function WorkbenchApp() {
+  const client = getSupabaseClient();
   const repository = useMemo(
-    () => createMockRepository(mockLeads, mockFollowUps),
-    [],
+    () =>
+      client
+        ? createSupabaseRepository(client)
+        : createMockRepository(mockLeads, mockFollowUps),
+    [client],
   );
   const leads = useSyncExternalStore(
     repository.subscribe,
@@ -32,6 +38,10 @@ export function WorkbenchApp() {
   const [syncing, setSyncing] = useState(false);
   const [lastSyncAt, setLastSyncAt] = useState("2026-09-16T10:18:00+08:00");
   const [lastSyncLabel, setLastSyncLabel] = useState("2 分钟前");
+
+  useEffect(() => {
+    void repository.load();
+  }, [repository]);
 
   const selectedLead = selectedLeadId
     ? leads.find((lead) => lead.id === selectedLeadId)
@@ -52,7 +62,7 @@ export function WorkbenchApp() {
     }
   };
 
-  const handleCreateOffline = (input: CreateOfflineLeadInput) =>
+  const handleCreateOffline = async (input: CreateOfflineLeadInput) =>
     repository.addOfflineLead(input);
 
   const handleFollowUp = async (input: FollowUpInput) => {
@@ -158,7 +168,9 @@ export default function App() {
     signIn,
   } = useAuth();
 
-  if (configurationMissing) return <SetupPage />;
+  if (configurationMissing) {
+    return import.meta.env.DEV ? <WorkbenchApp /> : <SetupPage />;
+  }
   if (loading) return <LoadingPage />;
   if (!session || !profile) return <LoginPage error={error} signIn={signIn} />;
 
