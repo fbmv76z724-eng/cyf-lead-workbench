@@ -1,8 +1,8 @@
 import { render, screen } from "@testing-library/react";
-import App from "../src/App";
+import { WorkbenchApp } from "../src/App";
 
 it("provides a skip link and one main landmark", () => {
-  render(<App />);
+  render(<WorkbenchApp />);
   expect(screen.getByRole("link", { name: "跳到主要内容" })).toBeVisible();
   expect(screen.getAllByRole("main")).toHaveLength(1);
 });

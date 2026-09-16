@@ -758,6 +758,115 @@ main {
   gap: 14px;
 }
 
+.auth-page {
+  display: grid;
+  min-height: 100vh;
+  place-items: center;
+  padding: 24px;
+}
+
+.auth-card {
+  display: grid;
+  width: min(100%, 420px);
+  gap: 22px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  padding: 28px;
+  box-shadow: var(--shadow-lg);
+}
+
+.auth-card > div:not(.auth-mark) {
+  display: grid;
+  gap: 6px;
+}
+
+.auth-card > div > p:last-child {
+  color: var(--color-muted-foreground);
+}
+
+.auth-mark {
+  display: grid;
+  width: 42px;
+  height: 42px;
+  place-items: center;
+  border-radius: 8px;
+  background: var(--color-primary-soft);
+  color: var(--color-primary-strong);
+  font-weight: 700;
+}
+
+.auth-form {
+  display: grid;
+  gap: 14px;
+}
+
+.auth-form .button {
+  width: 100%;
+  margin-top: 2px;
+}
+
+.auth-error {
+  border: 1px solid #f4c7c7;
+  border-radius: var(--radius-md);
+  background: var(--color-destructive-soft);
+  padding: 9px 11px;
+  color: var(--color-destructive);
+  font-size: 0.84rem;
+}
+
+.setup-list {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+}
+
+.setup-list > div {
+  display: grid;
+  gap: 2px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-muted);
+  padding: 10px 12px;
+}
+
+.setup-list dt {
+  color: var(--color-foreground);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.78rem;
+  font-weight: 650;
+}
+
+.setup-list dd {
+  margin: 0;
+  color: var(--color-muted-foreground);
+  font-size: 0.78rem;
+}
+
+.auth-card--loading {
+  justify-items: center;
+  text-align: center;
+}
+
+.auth-spinner {
+  width: 28px;
+  height: 28px;
+  border: 3px solid var(--color-primary-soft);
+  border-top-color: var(--color-primary);
+  border-radius: 50%;
+  animation: spin 700ms linear infinite;
+}
+
+.is-spinning {
+  animation: spin 700ms linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 .health-label {
   border-radius: 99px;
   background: var(--color-destructive-soft);
