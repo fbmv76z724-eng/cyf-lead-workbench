@@ -54,12 +54,12 @@ it("finds a lead by its full phone number while the list shows a masked value", 
         ...mockLeads[0],
         id: "lead-full-phone",
         phoneMasked: "191****5089",
-        phoneFull: "19136005089",
+        phoneFull: "19100000001",
       },
     ],
     {
     ...emptyLeadFilters,
-      search: "19136005089",
+      search: "19100000001",
     },
   );
 
@@ -82,11 +82,15 @@ it("applies search filters", async () => {
   );
   await userEvent.type(
     screen.getByLabelText("搜索司机ID或手机号"),
-    "2885118908860505",
+    String(mockLeads[0].cyfDriverId),
   );
   expect(screen.getByLabelText("流入开始日期")).toBeVisible();
   expect(screen.getByLabelText("流入结束日期")).toBeVisible();
   expect(screen.getByLabelText("线索来源")).toBeVisible();
-  expect(screen.getAllByText("ID 2885118908860505")).toHaveLength(2);
-  expect(screen.queryByText("ID 2885118908785293")).not.toBeInTheDocument();
+  expect(
+    screen.getAllByText(`ID ${mockLeads[0].cyfDriverId}`),
+  ).toHaveLength(2);
+  expect(
+    screen.queryByText(`ID ${mockLeads[1].cyfDriverId}`),
+  ).not.toBeInTheDocument();
 });

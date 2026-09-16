@@ -8,14 +8,14 @@ it("keeps synced CYF phone numbers and follow history", () => {
   const lead = mockLeads[0];
   const history = mockFollowUps.filter((item) => item.leadId === lead.id);
 
-  expect(lead.phoneFull).toBe("19136005089");
+  expect(lead.phoneFull).toBe("19100000001");
   expect(lead.latestLinkStatus).toBe(1);
-  expect(lead.latestFollowUser).toBe("沙马五字莫");
+  expect(lead.latestFollowUser).toBe("测试跟进员");
   expect(history).toHaveLength(1);
   expect(history[0]).toMatchObject({
     origin: "cyf",
     syncState: "synced",
-    operatorName: "沙马五字莫",
+    operatorName: "测试跟进员",
   });
 });
 
@@ -39,15 +39,15 @@ it("shows inflow time and driver source in the lead list", () => {
   ).not.toBeInTheDocument();
   expect(within(screen.getByRole("table")).getByText("线上")).toBeVisible();
   expect(
-    within(screen.getByRole("table")).getByText("沙马五字莫"),
+    within(screen.getByRole("table")).getByText("测试跟进员"),
   ).toBeVisible();
   expect(
-    within(screen.getByRole("table")).getByText("09/16 12:14"),
+    within(screen.getByRole("table")).getByText("09/16 12:00"),
   ).toBeVisible();
 });
 
 it("reveals the full phone number from the list", async () => {
-  const onRevealPhone = vi.fn().mockResolvedValue("19136005089");
+  const onRevealPhone = vi.fn().mockResolvedValue(mockLeads[0].phoneFull);
 
   render(
     <LeadList
@@ -59,11 +59,15 @@ it("reveals the full phone number from the list", async () => {
 
   const table = screen.getByRole("table");
   await userEvent.click(
-    within(table).getByRole("button", { name: "获取完整手机号 191****5089" }),
+    within(table).getByRole("button", {
+      name: `获取完整手机号 ${mockLeads[0].phoneMasked}`,
+    }),
   );
 
   expect(onRevealPhone).toHaveBeenCalledWith(mockLeads[0]);
-  expect(await within(table).findByText("19136005089")).toBeVisible();
+  expect(
+    await within(table).findByText(mockLeads[0].phoneFull!),
+  ).toBeVisible();
 });
 
 it("copies the CYF driver id from the list", async () => {
@@ -84,9 +88,9 @@ it("copies the CYF driver id from the list", async () => {
   const table = screen.getByRole("table");
   await userEvent.click(
     within(table).getByRole("button", {
-      name: "复制司机ID 2885118908860505",
+      name: `复制司机ID ${mockLeads[0].cyfDriverId}`,
     }),
   );
 
-  expect(writeText).toHaveBeenCalledWith("2885118908860505");
+  expect(writeText).toHaveBeenCalledWith(String(mockLeads[0].cyfDriverId));
 });

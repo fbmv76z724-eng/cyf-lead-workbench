@@ -31,6 +31,8 @@ it("shows a claim action for an unassigned lead", () => {
   );
 
   expect(
-    screen.getAllByRole("button", { name: "认领线索 191****5089" }),
+    screen.getAllByRole("button", {
+      name: `认领线索 ${mockLeads[0].phoneMasked}`,
+    }),
   ).toHaveLength(2);
 });

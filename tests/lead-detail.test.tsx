@@ -51,7 +51,7 @@ it("keeps the masked phone and offers a retry when reveal fails", async () => {
   const onRevealPhone = vi
     .fn()
     .mockResolvedValueOnce(undefined)
-    .mockResolvedValueOnce("19136005089");
+    .mockResolvedValueOnce("19100000001");
 
   render(
     <LeadDetailDrawer
@@ -73,6 +73,6 @@ it("keeps the masked phone and offers a retry when reveal fails", async () => {
 
   await userEvent.click(screen.getByRole("button", { name: "重试获取" }));
 
-  expect(await screen.findByText("19136005089")).toBeVisible();
+  expect(await screen.findByText("19100000001")).toBeVisible();
   expect(onRevealPhone).toHaveBeenCalledTimes(2);
 });
