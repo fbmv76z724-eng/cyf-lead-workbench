@@ -4,6 +4,13 @@ The browser uses Supabase Auth and PostgreSQL with Row Level Security (RLS).
 The local CYF connector may use the service role key, but that key must never be
 in the web bundle, GitHub variables, or browser environment.
 
+Current production project:
+
+- Name: `cyf-lead-workbench`
+- Ref: `walnfavnwezpdacfxhkd`
+- URL: `https://walnfavnwezpdacfxhkd.supabase.co`
+- Region: `ap-northeast-2`
+
 ## 1. Create and link the project
 
 Create a Supabase project, then link this repository:
@@ -31,6 +38,10 @@ public sign-up. Create user accounts from Authentication > Users.
 
 The migration creates a `profiles` row for each Auth user. New profiles default
 to `sales` and active.
+
+Administrators can create additional accounts from the workbench Account
+Management page. The `admin-users` Edge Function performs that operation after
+verifying the caller is an active administrator.
 
 ## 4. Promote the first administrator
 
@@ -60,6 +71,12 @@ Use two test accounts:
 
 The claim and assignment operations run through the `claim_lead` and
 `assign_lead` database functions. RLS remains the final authorization boundary.
+
+## Deploying functions
+
+```bash
+supabase functions deploy admin-users --project-ref walnfavnwezpdacfxhkd
+```
 
 ## Data migration warning
 
