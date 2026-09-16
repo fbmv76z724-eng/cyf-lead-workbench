@@ -105,6 +105,17 @@ GitHub Pages build requires:
 
 The local CYF connector requires a server-only `SUPABASE_SERVICE_ROLE_KEY`; it must never be sent to the browser.
 
+The Pages workflow reads the two browser values from GitHub repository
+variables. A missing value produces the setup screen instead of rendering a
+broken workbench.
+
+## Data Exposure
+
+The current static snapshot modules still contain real lead and phone data.
+They must be imported into Supabase and removed from the deployed source bundle
+before production use. Because the repository and Pages site have been public,
+removing files does not erase copies already present in Git history or caches.
+
 ## Test Strategy
 
 - Unit tests for role-based navigation and authorization helpers.
